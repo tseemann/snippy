@@ -57,7 +57,8 @@ while (my $line = <>)
       next;
     }
    
-    unless ($var[0] > 200 and $var[2] == 0) {
+#    unless ($var[0] > 200 and $var[2] == 0) {
+    unless ($var[2] == 0 and $var[1] >= 200) {
       print STDERR "$seq:$pos - 'homozygous' probability not convincing enough: $data\n";
       next;
     } 
@@ -130,7 +131,7 @@ sub setOptions {
 }
 
 sub usage {
-  print "Usage: $0 [options] -r snps.vcf -b alignments.bam -r reference.fa > snps.csv\n";
+  print "Usage: $0 [options] raw.vcf > trusted.vcf\n";
   foreach (@Options) {
     printf "  --%-13s %s%s.\n",$_->{OPT},$_->{DESC},
            defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";

@@ -1,3 +1,17 @@
+
+v1.2 - XXX
+----------
+* moved 'vcfutils.pl varFilter' from pipe to separate command
+* save raw.vcf AND filtered.vcf now (before final filtered snps.vcf)
+* tell user how many variants were found
+* remind user what folder the result files before signing off
+* added -B to samtools mpileup as it was messing up post-indel base quals
+* snippy-vcf_tsv: added --auto option
+* snippy-vcf_report: added --auto option
+* snippy-vcf_report: added some debug output
+* snippy-vcf_filter : fixed usage()
+* snippy-vcf_filter : removed PL[0] > 200 requirement
+
  
 v1.1 - Tue 8 Oct 2013
 ----------------------
@@ -8,3 +22,5 @@ v1.1 - Tue 8 Oct 2013
 v1.0 - Sun 15 Sep 2013
 -----------------------
 * first release
+
+

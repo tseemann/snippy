@@ -12,7 +12,7 @@ use File::Spec qw();
 
 my $EXE = $FindBin::RealScript;
 my $HOMEDIR = $FindBin::Bin;
-my $VERSION = "1.1";
+my $VERSION = "1.2";
 my $SYNOPSIS = "Fast bacterial SNP/INDEL calling from NGS reads";
 my $AUTHOR = 'Torsten Seemann <torsten.seemann@monash.edu>';
 my $URL = 'http://www.vicbioinformatics.com';
@@ -95,7 +95,7 @@ $bwaopt .= ' -p' if $interleaved;
 
 my $tsvopt = $noindels ? '--noindels' : '';
 
-my $mpileopt = $noindels ? "-I" : "-m 3 -F 0.9";
+my $mpileopt = $noindels ? "-I" : "";   # "-m 3 -F 0.9";
 
 my @cmd = (
   "renice -n 10 $$ >> $ERRORLOG",
@@ -107,8 +107,9 @@ my @cmd = (
     ." | samtools sort -@ $threads -m 1G - aln)",
   "samtools index aln.bam",
   "samtools depth aln.bam | awk '{ s+=\$3 ; n++ } END { print s/n }' > depth.txt",
-  "(samtools mpileup $mpileopt -E -m 3 -q $mapqual -g -u -f ref.fa aln.bam | bcftools view -c -v - | vcfutils.pl varFilter -Q 30) > raw.vcf",
-  "snippy-vcf_filter raw.vcf > snps.vcf",
+  "( samtools mpileup $mpileopt -B -q $mapqual -g -u -f ref.fa aln.bam | bcftools view -c -v - ) > raw.vcf",
+  "vcfutils.pl varFilter -Q 30 raw.vcf > filtered.vcf",
+  "snippy-vcf_filter filtered.vcf > snps.vcf",
   "snippy-vcf_tsv --vcf snps.vcf --ref ref.fa --bam aln.bam > snps.csv",
 );
 
@@ -135,6 +136,7 @@ open GFF, '>', "snps.gff";
 print GFF "##gff-version 3\n";
 
 msg("Creating BED and GFF files.");
+my $num_snps=0;
 open CSV, '<', "snps.csv";
 while (<CSV>) {
   chomp;
@@ -143,7 +145,9 @@ while (<CSV>) {
   print BED join("\t", $chr, $pos-1, $pos),"\n";
   print GFF join("\t", $chr, "$EXE:$VERSION", 'variation', $pos, $pos, 
                        '.', '.', 0, "note=$type $ref=>$alt $evid"),"\n";
+  $num_snps++;
 }
+msg("Identified $num_snps variants.");
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # optionally generate a long visual report
@@ -177,6 +181,7 @@ msg("Walltime used:", $secs->pretty);
 
 my($outfiles) = qx(echo snps.*);
 chomp $outfiles;
+msg("Result folder: $outdir");
 msg("Result files: $outfiles");
 
 msg("May the SNPs be with you.");

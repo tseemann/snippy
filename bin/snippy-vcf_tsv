@@ -6,8 +6,14 @@ use Data::Dumper;
 use IO::Handle;
 use Fatal;
 
-my(@Options, $debug, $vcf, $ref, $bam);
+my(@Options, $debug, $auto, $vcf, $ref, $bam);
 setOptions();
+
+if ($auto) {
+  $vcf ||= 'snps.vcf';
+  $ref ||= 'ref.fa';
+  $bam ||= 'aln.bam';
+}
 
 $vcf or die "need --vcf <snps.vcf>";
 $ref or die "need --ref <reference.fa>";
@@ -115,6 +121,7 @@ sub setOptions {
   @Options = (
     {OPT=>"help!",     VAR=>\&usage,                DESC=>"This help"},
     {OPT=>"debug!",    VAR=>\$debug,   DEFAULT=>0,  DESC=>"Output verbose debug info"},
+    {OPT=>"auto!",     VAR=>\$auto,    DEFAULT=>0 , DESC=>"Autoset --vcf/bam/ref to snippy names"},
     {OPT=>"vcf=s",     VAR=>\$vcf,     DEFAULT=>'', DESC=>"VCF input file"},
     {OPT=>"bam=s",     VAR=>\$bam,     DEFAULT=>'', DESC=>"BAM alignments"},
     {OPT=>"ref=s",     VAR=>\$ref,     DEFAULT=>'', DESC=>"FASTA reference"},

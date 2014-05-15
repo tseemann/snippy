@@ -4,8 +4,14 @@ use strict;
 use List::Util qw(max);
 use Fatal;
 
-my(@Options, $debug, $vcf, $ref, $bam, $html);
+my(@Options, $debug, $auto, $vcf, $ref, $bam, $html);
 setOptions();
+
+if ($auto) {
+  $vcf ||= 'snps.vcf';
+  $ref ||= 'ref.fa';
+  $bam ||= 'aln.bam';
+}
 
 $vcf or die "need --vcf <snps.vcf>";
 $ref or die "need --ref <reference.fa>";
@@ -34,6 +40,7 @@ while (<VCF>) {
   }
 
   my $cmd = "samtools tview -p '$chr:$begin' $opt $bam $ref";
+  print STDERR "Running: $cmd ...\n";
   system($cmd)==0 or die "Could not run: $cmd";
 }
 
@@ -46,6 +53,7 @@ sub setOptions {
   @Options = (
     {OPT=>"help!",     VAR=>\&usage,                DESC=>"This help"},
     {OPT=>"debug!",    VAR=>\$debug,   DEFAULT=>0 , DESC=>"Output verbose debug info"},
+    {OPT=>"auto!",     VAR=>\$auto,    DEFAULT=>0 , DESC=>"Autoset --vcf/bam/ref to snippy names"},
     {OPT=>"vcf=s",     VAR=>\$vcf,     DEFAULT=>'', DESC=>"VCF input file"},
     {OPT=>"bam=s",     VAR=>\$bam,     DEFAULT=>'', DESC=>"BAM alignments (indexed)"},
     {OPT=>"ref=s",     VAR=>\$ref,     DEFAULT=>'', DESC=>"FASTA reference (indexed)"},
