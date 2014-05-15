@@ -1,4 +1,9 @@
 
+v1.4 - XXX XX XXX 2014
+----------------------
+* updated freebayes linux binary (failed to compile for darwin)
+* switched to paralell-freebayes
+
 v1.3 - Tue 22 Oct 2013
 ----------------------
 * MAJOR: switched back to FreeBayes 
