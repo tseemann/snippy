@@ -47,8 +47,8 @@ sub setOptions {
     {OPT=>"help!",     VAR=>\&usage,                DESC=>"This help"},
     {OPT=>"debug!",    VAR=>\$debug,   DEFAULT=>0 , DESC=>"Output verbose debug info"},
     {OPT=>"vcf=s",     VAR=>\$vcf,     DEFAULT=>'', DESC=>"VCF input file"},
-    {OPT=>"bam=s",     VAR=>\$bam,     DEFAULT=>'', DESC=>"BAM alignments"},
-    {OPT=>"ref=s",     VAR=>\$ref,     DEFAULT=>'', DESC=>"FASTA reference"},
+    {OPT=>"bam=s",     VAR=>\$bam,     DEFAULT=>'', DESC=>"BAM alignments (indexed)"},
+    {OPT=>"ref=s",     VAR=>\$ref,     DEFAULT=>'', DESC=>"FASTA reference (indexed)"},
     {OPT=>"html!",     VAR=>\$html,    DEFAULT=>0 , DESC=>"Write a HTML report instead of TXT"},
   );
 

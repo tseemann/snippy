@@ -57,7 +57,7 @@ while (my $line = <>)
       next;
     }
    
-    unless ($var[0] == 255 and $var[2] == 0) {
+    unless ($var[0] > 200 and $var[2] == 0) {
       print STDERR "$seq:$pos - 'homozygous' probability not convincing enough: $data\n";
       next;
     } 

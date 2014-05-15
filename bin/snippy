@@ -12,7 +12,8 @@ use File::Spec qw();
 
 my $EXE = $FindBin::RealScript;
 my $HOMEDIR = $FindBin::Bin;
-my $VERSION = "1.0";
+my $VERSION = "1.1";
+my $SYNOPSIS = "Fast bacterial SNP/INDEL calling from NGS reads";
 my $AUTHOR = 'Torsten Seemann <torsten.seemann@monash.edu>';
 my $URL = 'http://www.vicbioinformatics.com';
 my $OPSYS = $^O;
@@ -23,7 +24,7 @@ my $t0 = localtime;
 # command line options
 
 my(@Options, $quiet, $force, $outdir, $reference, $threads, $mapqual, $report,
-             $interleaved, $correcting, $noindels, $confidence, $cleanup);
+             $interleaved, $correcting, $noindels, $cleanup);
 setOptions();
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -94,7 +95,7 @@ $bwaopt .= ' -p' if $interleaved;
 
 my $tsvopt = $noindels ? '--noindels' : '';
 
-my $mpileopt = $noindels ? "-I" : "-m 3 -F $confidence";
+my $mpileopt = $noindels ? "-I" : "-m 3 -F 0.9";
 
 my @cmd = (
   "renice -n 10 $$ >> $ERRORLOG",
@@ -209,10 +210,10 @@ sub version {
 sub show_citation {
   print STDERR << "EOCITE";
   
-If you use Snippy in your work, please cite:
+If you use $EXE in your work, please cite:
 
     Seemann T (2013)
-    Snippy: fast bacterial SNP calling from NGS reads
+    $EXE: $SYNOPSIS
     http://vicbioinformatics.com/
     
 Thank you.
@@ -239,8 +240,7 @@ sub setOptions {
     {OPT=>"outdir=s",  VAR=>\$outdir, DEFAULT=>'',  DESC=>"Output folder"},
     {OPT=>"force!",  VAR=>\$force, DEFAULT=>0,  DESC=>"Force overwrite of existing output folder"},
     {OPT=>"interleaved!",  VAR=>\$interleaved, DEFAULT=>0,  DESC=>"Single input file is interleaved pairs, not singles"},
-#    {OPT=>"correcting!",  VAR=>\$correcting, DEFAULT=>0,  DESC=>"Enable if correcting a genome assembled from same reads"},
-    {OPT=>"confidence=f",  VAR=>\$confidence, DEFAULT=>0.85,  DESC=>"Minimum confidence in variants listed"},
+#    {OPT=>"correcting!",  VAR=>\$correcting, DEFAULT=>0,  DESC=>"Enable if correcting a genome assembled from same reads (EXPERIMENTAL)"},
     {OPT=>"noindels!",  VAR=>\$noindels, DEFAULT=>0,  DESC=>"Only look for substitutions, not indels"},
     {OPT=>"mapqual=f",  VAR=>\$mapqual, DEFAULT=>10,  DESC=>"Minimum mapping quality to allow"},
     {OPT=>"cleanup!",  VAR=>\$cleanup, DEFAULT=>0,  DESC=>"Remove all non-SNP files: BAMs, indices etc"},
@@ -262,7 +262,7 @@ sub setOptions {
 #----------------------------------------------------------------------
 
 sub usage {
-  print STDERR "Synopsis:\n  Fast bacterial SNP/INDEL calling from NGS reads\n",
+  print STDERR "Synopsis:\n  $EXE $VERSION - $SYNOPSIS\n",
                "Author:\n  $AUTHOR\n",
                "Usage:\n",  
                "  $EXE [options] --ref <ref.fasta> <R1.fq.gz> <R2.fq.gz>\n",
