@@ -1,0 +1,50 @@
+#!/bin/bash
+
+DESTDIR=/tmp
+
+if [ ! -d "../test" ]; then
+  echo "Please run this script from the bin/ folder of the snippy folder."
+  exit 1
+fi
+
+NAME=$(snippy --version 2>&1 | sed 's/ /-/g')
+echo "Using name: $NAME"
+
+FOLDER="$DESTDIR/$NAME"
+echo "Making fresh folder: $FOLDER"
+if [ -f "$FOLDER" ]; then
+  rm -r "$FOLDER"
+fi
+mkdir "$FOLDER"
+
+#echo "Converting HTML manual to TXT"
+#links -dump ../doc/snippy-manual.html > ../doc/snippy-manual.txt
+
+echo "Copying files to: $FOLDER"
+cp -rv ../bin ../doc ../test ../binaries "$FOLDER"
+
+echo "Removing unwanted backup files in: $FOLDER"
+find "$FOLDER" -name "*~" -o -name DEADJOE -exec rm -f {} \;
+
+TARBALL="$DESTDIR/$NAME.tar.gz"
+echo "Creating: $TARBALL"
+tar -C "$DESTDIR" -vcf - "$NAME" | pigz > "$TARBALL"
+
+BZIPBALL="$DESTDIR/$NAME.tar.bz2";
+echo "Creating: $BZIPBALL"
+tar -C "$DESTDIR" -vcf - "$NAME" | pbzip2 > "$BZIPBALL"
+
+
+echo "Cleaning up: $FOLDER"
+rm -r "$FOLDER"
+
+echo "Checking tarball: $TARBALL"
+ls -l $TARBALL 
+
+echo "Checking bzipball: $TARBALL"
+ls -l $BZIPBALL
+#tar ztf $TARBALL
+
+echo "Your tarball is here: $TARBALL"
+echo "Your bzipball is here: $BZIPBALL"
+echo "Done."

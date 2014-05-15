@@ -1,0 +1,338 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use FindBin;
+use Time::Piece;
+use Time::Seconds;
+use File::Path qw(make_path remove_tree);
+use File::Spec qw();
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# global variables
+
+my $EXE = $FindBin::RealScript;
+my $HOMEDIR = $FindBin::Bin;
+my $VERSION = "1.0";
+my $AUTHOR = 'Torsten Seemann <torsten.seemann@monash.edu>';
+my $URL = 'http://www.vicbioinformatics.com';
+my $OPSYS = $^O;
+my $ERRORLOG = "snippy_log.txt";
+my $t0 = localtime;
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# command line options
+
+my(@Options, $quiet, $force, $outdir, $reference, $threads, $mapqual, $report,
+             $interleaved, $correcting, $noindels, $confidence, $cleanup);
+setOptions();
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# greet the user
+
+msg("This is $EXE $VERSION");
+msg("Written by $AUTHOR");
+msg("Obtained from $URL");
+msg("Detected operating system: $OPSYS");
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# give access to bundled tools (at end of PATH)
+
+msg("Enabling bundled tools in: $HOMEDIR/binaries/{$OPSYS,noarch}");
+$ENV{PATH} .= ":$HOMEDIR/binaries/$OPSYS:$HOMEDIR/binaries/noarch";
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# check for needed exes
+
+for my $exe (qw(cp awk renice bwa samtools bcftools vcfutils.pl snippy-vcf_filter snippy-vcf_tsv snippy-vcf_report)) {
+  system("which $exe > /dev/null")==0 or err("Can not find '$exe' in PATH");
+  msg("Found $exe - ok.");
+}
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# type check parameters
+
+$reference or err("Please supply a reference FASTA file with --reference");
+-r $reference or err("Invalid --reference filename");
+$reference = File::Spec->rel2abs($reference);
+msg("Using reference: $reference");
+
+$threads > 0 or err("Invalid --threads $threads");
+msg("Will use $threads threads");
+
+@ARGV = map { File::Spec->rel2abs($_) } @ARGV;
+my @reads = shift @ARGV;
+push @reads, shift(@ARGV) if @ARGV;
+msg("Using reads: @reads");
+for my $readfn (@reads) {
+  -r $readfn or err("Can't read sequence file: $readfn");
+}
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# prepare output folder
+
+$outdir or err("Please specify where to write results to using --outdir folder");
+if (-d $outdir) {
+  if ($force) {
+    msg("Deleting all files in existing folder: $outdir");
+    remove_tree($outdir, { keep_root=>1 } )
+  }
+  else {
+    err("Output folder $outdir already exists.");
+  }
+}
+else {
+  msg("Creating folder: $outdir");
+  make_path($outdir);
+}
+chdir($outdir);
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# prepare the commands
+
+my $bwaopt = $correcting ? '-k 19 -B 8 -L 20 -T 30 -U 50 -c 100' : '-k 16';
+$bwaopt .= ' -p' if $interleaved;
+
+my $tsvopt = $noindels ? '--noindels' : '';
+
+my $mpileopt = $noindels ? "-I" : "-m 3 -F $confidence";
+
+my @cmd = (
+  "renice -n 10 $$ >> $ERRORLOG",
+  "cp \Q$reference\E ref.fa",
+  "samtools faidx ref.fa",
+  "bwa index ref.fa",
+  "(bwa mem $bwaopt -t $threads ref.fa @reads"
+    ." | samtools view -@ $threads -q $mapqual -S -b -u -T ref.fa -"
+    ." | samtools sort -@ $threads -m 1G - aln)",
+  "samtools index aln.bam",
+  "samtools depth aln.bam | awk '{ s+=\$3 ; n++ } END { print s/n }' > depth.txt",
+  "(samtools mpileup $mpileopt -E -m 3 -q $mapqual -g -u -f ref.fa aln.bam | bcftools view -c -v - | vcfutils.pl varFilter -Q 30) > raw.vcf",
+  "snippy-vcf_filter raw.vcf > snps.vcf",
+  "snippy-vcf_tsv --vcf snps.vcf --ref ref.fa --bam aln.bam > snps.csv",
+);
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# run the commands
+
+for my $cmd (@cmd) {
+  # put section in logfile
+  open my $logfh, '>>', $ERRORLOG;
+  print $logfh "\n### ", $cmd, "\n\n";
+  close $logfh;
+  # run it
+  $cmd .= " 2>> $ERRORLOG";
+  msg("Running: $cmd");
+  system($cmd)==0 or err("Error running command, check $outdir/$ERRORLOG");
+}
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# produce .bed and .gff files from the .csv
+
+open BED, '>', "snps.bed";
+
+open GFF, '>', "snps.gff";
+print GFF "##gff-version 3\n";
+
+msg("Creating BED and GFF files.");
+open CSV, '<', "snps.csv";
+while (<CSV>) {
+  chomp;
+  my($chr,$pos,$type,$ref,$alt,$evid) = split m/\t/;
+  next if $pos !~ m/^\d+$/;  # header line or other gumpf
+  print BED join("\t", $chr, $pos-1, $pos),"\n";
+  print GFF join("\t", $chr, "$EXE:$VERSION", 'variation', $pos, $pos, 
+                       '.', '.', 0, "note=$type $ref=>$alt $evid"),"\n";
+}
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# optionally generate a long visual report
+
+if ($report) {
+  msg("Generating report, please be patient...");
+  system("snippy-vcf_report --bam aln.bam --ref ref.fa --vcf snps.vcf > snps.txt 2>> $ERRORLOG");
+}
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# clean up
+
+if ($cleanup) {
+  my @delme = map { "ref.fa$_" } ('', qw(.fai .amb .ann .bwt .pac .sa));
+  push @delme, ("aln.bam", "aln.bam.bai", 'raw.vcf');
+  for my $file (@delme) {
+    msg("Deleting: $file");
+    unlink $file;
+  }
+}
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# calculate time spent
+
+my $t1 = localtime;
+my $secs = $t1 - $t0; # returns a Time::Seconds
+msg("Walltime used:", $secs->pretty);
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# report results
+
+my($outfiles) = qx(echo snps.*);
+chomp $outfiles;
+msg("Result files: $outfiles");
+
+msg("May the SNPs be with you.");
+
+#----------------------------------------------------------------------
+
+sub msg {
+  return if $quiet;
+  my $t = localtime;
+  my $line = "[".$t->hms."] @_\n";
+  print STDERR $line;
+}
+
+#----------------------------------------------------------------------
+
+sub err {
+  $quiet=0;
+  msg(@_);
+  exit(2);
+}
+
+#----------------------------------------------------------------------
+
+sub version {
+  print STDERR "$EXE $VERSION\n";
+  exit;
+}
+
+#----------------------------------------------------------------------
+
+sub show_citation {
+  print STDERR << "EOCITE";
+  
+If you use Snippy in your work, please cite:
+
+    Seemann T (2013)
+    Snippy: fast bacterial SNP calling from NGS reads
+    http://vicbioinformatics.com/
+    
+Thank you.
+
+EOCITE
+
+  exit;
+}
+
+#----------------------------------------------------------------------
+# Option setting routines
+
+sub setOptions {
+  use Getopt::Long;
+
+  @Options = (
+    'Options:',
+    {OPT=>"help",    VAR=>\&usage,             DESC=>"This help"},
+    {OPT=>"version", VAR=>\&version,           DESC=>"Print version and exit"},
+    {OPT=>"citation",VAR=>\&show_citation,     DESC=>"Print citation for referencing $EXE"},
+    {OPT=>"quiet!",  VAR=>\$quiet, DEFAULT=>0, DESC=>"No screen output"},
+    {OPT=>"threads=i",  VAR=>\$threads, DEFAULT=>8,  DESC=>"Number of threads for bwa/samtools"},
+    {OPT=>"reference=s",  VAR=>\$reference, DEFAULT=>'',  DESC=>"Reference FASTA file"},
+    {OPT=>"outdir=s",  VAR=>\$outdir, DEFAULT=>'',  DESC=>"Output folder"},
+    {OPT=>"force!",  VAR=>\$force, DEFAULT=>0,  DESC=>"Force overwrite of existing output folder"},
+    {OPT=>"interleaved!",  VAR=>\$interleaved, DEFAULT=>0,  DESC=>"Single input file is interleaved pairs, not singles"},
+#    {OPT=>"correcting!",  VAR=>\$correcting, DEFAULT=>0,  DESC=>"Enable if correcting a genome assembled from same reads"},
+    {OPT=>"confidence=f",  VAR=>\$confidence, DEFAULT=>0.85,  DESC=>"Minimum confidence in variants listed"},
+    {OPT=>"noindels!",  VAR=>\$noindels, DEFAULT=>0,  DESC=>"Only look for substitutions, not indels"},
+    {OPT=>"mapqual=f",  VAR=>\$mapqual, DEFAULT=>10,  DESC=>"Minimum mapping quality to allow"},
+    {OPT=>"cleanup!",  VAR=>\$cleanup, DEFAULT=>0,  DESC=>"Remove all non-SNP files: BAMs, indices etc"},
+    {OPT=>"report!",  VAR=>\$report, DEFAULT=>0,  DESC=>"Produce long report with visual alignment (slow)"},
+  );
+
+  (!@ARGV) && (usage());
+
+  &GetOptions(map {$_->{OPT}, $_->{VAR}} grep { ref } @Options) || usage();
+
+  # Now setup default values.
+  foreach (@Options) {
+    if (ref $_ && defined($_->{DEFAULT}) && !defined(${$_->{VAR}})) {
+      ${$_->{VAR}} = $_->{DEFAULT};
+    }
+  }
+}
+
+#----------------------------------------------------------------------
+
+sub usage {
+  print STDERR "Synopsis:\n  Fast bacterial SNP/INDEL calling from NGS reads\n",
+               "Author:\n  $AUTHOR\n",
+               "Usage:\n",  
+               "  $EXE [options] --ref <ref.fasta> <R1.fq.gz> <R2.fq.gz>\n",
+               "  $EXE [options] --ref <ref.fasta> --interleaved <shuffledPairs.fq>\n",
+               "  $EXE [options] --ref <ref.fasta> <SE.fasta>\n",
+               "";
+
+  foreach (@Options) {
+    if (ref) {
+      my $def = defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";
+      $def = ($def ? ' (default OFF)' : '(default ON)') if $_->{OPT} =~ m/!$/;
+      my $opt = $_->{OPT};
+      $opt =~ s/!$//; 
+      $opt =~ s/=s$/ [X]/; 
+      $opt =~ s/=i$/ [N]/;
+      $opt =~ s/=f$/ [n.n]/;
+      printf STDERR "  --%-15s %s%s\n", $opt, $_->{DESC}, $def;
+    }
+    else {
+      print STDERR "$_\n";
+    }      
+  }
+  exit(1);
+}
+
+#----------------------------------------------------------------------
+
+__DATA__
+
+Usage: samtools mpileup [options] in1.bam [in2.bam [...]]
+
+Input options:
+
+       -6           assume the quality is in the Illumina-1.3+ encoding
+       -A           count anomalous read pairs
+       -B           disable BAQ computation
+       -b FILE      list of input BAM filenames, one per line [null]
+       -C INT       parameter for adjusting mapQ; 0 to disable [0]
+       -d INT       max per-BAM depth to avoid excessive memory usage [250]
+       -E           recalculate extended BAQ on the fly thus ignoring existing BQs
+       -f FILE      faidx indexed reference sequence file [null]
+       -G FILE      exclude read groups listed in FILE [null]
+       -l FILE      list of positions (chr pos) or regions (BED) [null]
+       -M INT       cap mapping quality at INT [60]
+       -r STR       region in which pileup is generated [null]
+       -R           ignore RG tags
+       -q INT       skip alignments with mapQ smaller than INT [0]
+       -Q INT       skip bases with baseQ/BAQ smaller than INT [13]
+       --rf INT     required flags: skip reads with mask bits unset []
+       --ff INT     filter flags: skip reads with mask bits set []
+
+Output options:
+
+       -D           output per-sample DP in BCF (require -g/-u)
+       -g           generate BCF output (genotype likelihoods)
+       -O           output base positions on reads (disabled by -g/-u)
+       -s           output mapping quality (disabled by -g/-u)
+       -S           output per-sample strand bias P-value in BCF (require -g/-u)
+       -u           generate uncompress BCF output
+
+SNP/INDEL genotype likelihoods options (effective with -g' or -u'):
+
+       -e INT       Phred-scaled gap extension seq error probability [20]
+       -F FLOAT     minimum fraction of gapped reads for candidates [0.002]
+       -h INT       coefficient for homopolymer errors [100]
+       -I           do not perform indel calling
+       -L INT       max per-sample depth for INDEL calling [250]
+       -m INT       minimum gapped reads for indel candidates [1]
+       -o INT       Phred-scaled gap open sequencing error probability [40]
+       -p           apply -m and -F per-sample to increase sensitivity
+       -P STR       comma separated list of platforms for indels [all]
+
+Notes: Assuming diploid individuals.

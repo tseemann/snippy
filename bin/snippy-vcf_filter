@@ -1,0 +1,142 @@
+#!/usr/bin/env perl
+use warnings;
+use strict;
+use List::Util qw(sum);
+use Data::Dumper;
+use FindBin;
+
+my(@Options, $noindels, $majority, $prob);
+setOptions();
+
+my $total=0;
+my $passed=0;
+
+while (my $line = <>) 
+{
+  if ( $line =~ m/^#/ ) 
+  {
+    print $line;
+    if ($line =~ m/^##fileformat=/) {
+      my $cmd = $FindBin::Script;
+      print "##snippyCommand=$cmd --maj $majority --prob $prob\n";
+    }
+  }
+  else 
+  {
+    chomp $line;
+
+    # CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT unknown
+    my($seq,$pos,undef,$ref,$alt,undef,undef,$tags,$format,$data) = split m/\t/, $line;
+    $total++;
+
+#    if (! defined $pos) { print STDERR "ERROR: $line"; exit -1; }
+
+    $ref = uc($ref);
+    $alt = uc($alt);
+
+    if ($alt =~ m/,/) {
+      print STDERR "$seq:$pos - has multiple ALTs: $alt\n";
+      next;
+    }
+
+    if (not defined $format) {
+      print STDERR "$seq:$pos - does not have a FORMAT column: $line\n";
+      next;
+    }
+
+    if ($format ne 'PL') {
+      print STDERR "$seq:$pos - FORMAT column not 'PL': $format | $data\n";
+      next;
+    }
+
+    # PL=0 just means the prob is very high and effectively p=1 (PL=255 is p=0)
+    my @var = split m/,/, $data;  # RR,RA,AA likelihoods
+
+    if (@var != 3) {
+      print STDERR "$seq:$pos - didn't find 3 likelihoods in DATA column: @var\n";
+      next;
+    }
+   
+    unless ($var[0] == 255 and $var[2] == 0) {
+      print STDERR "$seq:$pos - 'homozygous' probability not convincing enough: $data\n";
+      next;
+    } 
+   
+#    @var = map { 10 ** (-$_/10) } @var; # hi-res phred encoding of probs
+#    if ($var[2] > $prob && $var[1] < 1.0-$prob && $var[0] < 1.0-$prob) {
+#      # ok
+#    } 
+#    else {
+#      print STDERR "$seq:$pos - PL homozygous likelihood too low: $var[1] $var[2] [$data]\n";
+#      next;
+#    }
+
+    my $tag = vcf_tags_to_hash($tags);
+    
+    if ($noindels and exists $tag->{INDEL}) {
+      print STDERR "$seq:$pos - user requested to exclude INDELs\n";
+      next;
+    }
+    
+    my $depth = $tag->{DP};
+
+    $passed++;
+    print STDERR "$seq:$pos - passed #$passed: $ref=>$alt depth=$depth\n";
+
+    print $line, "\n";
+  }
+}
+
+print STDERR "Passed $passed of $total variants\n";
+
+#----------------------------------------------------------------------
+# name1=tag1;name2;name3=tag3
+
+sub vcf_tags_to_hash {
+  my($s) = @_;
+  my @pairs = split m/;/, $s;
+  my %tag;
+  for my $p (@pairs) {
+    my @x = split m/=/, $p;
+    $tag{$x[0]} = $x[1];  # will be =>undef for bareword tags eg. INDEL;
+  }
+  return \%tag;  
+}
+
+#----------------------------------------------------------------------
+# Option setting routines
+
+sub setOptions {
+  use Getopt::Long;
+
+  @Options = (
+    {OPT=>"help",      VAR=>\&usage,                DESC=>"This help"},
+#    {OPT=>"mindepth=i",  VAR=>\$mindepth,   DEFAULT=>3, DESC=>"Minimum depth required"},
+    {OPT=>"majority=f",  VAR=>\$majority,   DEFAULT=>0.9, DESC=>"Majority required"},
+    {OPT=>"probability=f",  VAR=>\$prob,   DEFAULT=>0.99, DESC=>"Probability of variant"},
+    {OPT=>"noindels!",    VAR=>\$noindels,   DEFAULT=>0, DESC=>"Don't call INDELS too"},
+  );
+
+  #(!@ARGV) && (usage());
+
+  &GetOptions(map {$_->{OPT}, $_->{VAR}} @Options) || usage();
+
+  # Now setup default values.
+  foreach (@Options) {
+    if (defined($_->{DEFAULT}) && !defined(${$_->{VAR}})) {
+      ${$_->{VAR}} = $_->{DEFAULT};
+    }
+  }
+}
+
+sub usage {
+  print "Usage: $0 [options] -r snps.vcf -b alignments.bam -r reference.fa > snps.csv\n";
+  foreach (@Options) {
+    printf "  --%-13s %s%s.\n",$_->{OPT},$_->{DESC},
+           defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";
+  }
+  exit(1);
+}
+ 
+
+#----------------------------------------------------------------------

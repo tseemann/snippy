@@ -1,0 +1,146 @@
+#!/usr/bin/env perl
+use warnings;
+use strict;
+use File::Temp;
+use Data::Dumper;
+use IO::Handle;
+use Fatal;
+
+my(@Options, $debug, $vcf, $ref, $bam);
+setOptions();
+
+$vcf or die "need --vcf <snps.vcf>";
+$ref or die "need --ref <reference.fa>";
+$bam or die "need --bam <alignments.bam>";
+
+my %type_of = (0=>'snp', -1=>'ins', +1=>'del');
+
+my @snp;
+my $bedfh = File::Temp->new();
+
+print STDERR "Parsing: $vcf\n";
+open VCF, '<', $vcf;
+while (<VCF>) {
+  next if m/^#/;
+  chomp;
+  # [VCF] CHROM POS ID REF ALT QUAL FILTER INFO FORMAT unknown
+  my($chr,$pos,undef,$ref,$alt) = split m/\t/;
+  # [BED] CHROM START(0-based) END(exclusive,not inclusive)
+  print $bedfh $chr,"\t",$pos-1,"\t",$pos,"\n";
+  # [CSV] CHROM POS TYPE REF ALT BASEDIST
+  my $type = $type_of{ length($ref) <=> length($alt) } ;
+  push @snp, [ $chr, $pos, $type, uc($ref), uc($alt) ];
+}
+$bedfh->flush;
+my $total = scalar(@snp);
+print STDERR "Writing: temporary BED file with $total lines\n";
+
+print join("\t", qw(CHROM POS TYPE REF ALT EVIDENCE)),"\n";
+my $count=0;
+my $bed = $bedfh->filename;
+my $cmd = "samtools mpileup -q 10 -f $ref -l $bed $bam";
+print STDERR "Running: $cmd\n";
+print STDERR "Writing: output TSV file (please wait)\n";
+
+open MPU, "$cmd 2> /dev/null |";
+while (<MPU>) 
+{
+  my $col = (split ' ')[4];   # column 4 is base pileup
+
+  my %freq = base_distrib($col);
+
+  if ($freq{'!'}) { # and $snp[$count][2] eq 'snp') {
+    $freq{$snp[$count][3]} = $freq{'!'}; 
+    delete $freq{'!'};
+  }
+
+  if ($freq{'*'}) {
+    $freq{$snp[$count][4]} = $freq{'*'};
+    delete $freq{'*'};
+  }
+
+  if ($freq{'-'}) {
+    $freq{$snp[$count][4]} = $freq{'-'};
+    delete $freq{'-'};
+  }
+
+  my $basedist = join(' ', map { $freq{$_} ? "$_:".$freq{$_} : '' } 
+                      sort { $freq{$b} <=> $freq{$a} } keys %freq);
+
+  print join("\t", @{$snp[$count]}, $basedist),"\n";
+  $count++;  
+  print STDERR "Processed: [$count/$total]: ",join(' ', @{$snp[$count-1]}),"\n" if $debug;
+}
+print STDERR "Converted $count SNPs to TSV format.\n";
+
+#----------------------------------------------------------------------
+
+sub base_distrib {
+  my($p) = @_;
+
+  my $oldp = $p;
+
+  $p =~ s/\^.//g;  # remove start of segment marker
+  $p =~ s/\$//g;   # remove end of segment marker
+
+  #
+  # ** NOTE ** 
+  # this code assumes the _same_ indel is being called
+  # sometimes with homopolymers you'll get a mixture
+  # but that's ok - this will alert the user to the error anyway
+  # weird mixtures of other indels don't happen in practice much
+  # TO-DO: iterate over and tally up the different evidence
+  #
+  $p =~ s/[,.][+]\d+[AGCTN]+/\*/gi;  # insertions
+  $p =~ s/[,.][-]\d+[AGCTN]+/\-/gi;  # deletions
+
+  $p =~ s/[,.]/\!/g;  # same as reference
+  $p = uc($p);        # uppercase to remove strand lc/uc
+
+  my %freq;
+  for my $c (split m//, $p) {
+    $freq{$c}++;
+  }
+
+#  print STDERR Dumper($oldp, $p, \%freq);
+  return %freq;
+}
+
+#----------------------------------------------------------------------
+# Option setting routines
+
+sub setOptions {
+  use Getopt::Long;
+
+  @Options = (
+    {OPT=>"help!",     VAR=>\&usage,                DESC=>"This help"},
+    {OPT=>"debug!",    VAR=>\$debug,   DEFAULT=>0,  DESC=>"Output verbose debug info"},
+    {OPT=>"vcf=s",     VAR=>\$vcf,     DEFAULT=>'', DESC=>"VCF input file"},
+    {OPT=>"bam=s",     VAR=>\$bam,     DEFAULT=>'', DESC=>"BAM alignments"},
+    {OPT=>"ref=s",     VAR=>\$ref,     DEFAULT=>'', DESC=>"FASTA reference"},
+  );
+
+  (!@ARGV) && (usage());
+
+  &GetOptions(map {$_->{OPT}, $_->{VAR}} @Options) || usage();
+
+  # Now setup default values.
+  foreach (@Options) {
+    if (defined($_->{DEFAULT}) && !defined(${$_->{VAR}})) {
+      ${$_->{VAR}} = $_->{DEFAULT};
+    }
+  }
+}
+
+sub usage {
+  print STDERR "Synopsis:\n  Convert a VCF (haploid) into TSV with column breakdown\n";
+  print STDERR "Usage:\n  $0 [options] --vcf snps.vcf --bam alignments.bam --ref reference.fa > snps.csv\n";
+  print STDERR "Options:\n";
+  foreach (@Options) {
+    printf STDERR "  --%-13s %s%s.\n",$_->{OPT},$_->{DESC},
+                  defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";
+  }
+  exit(1);
+}
+ 
+#----------------------------------------------------------------------

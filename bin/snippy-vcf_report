@@ -1,0 +1,78 @@
+#!/usr/bin/env perl
+use warnings;
+use strict;
+use List::Util qw(max);
+use Fatal;
+
+my(@Options, $debug, $vcf, $ref, $bam, $html);
+setOptions();
+
+$vcf or die "need --vcf <snps.vcf>";
+$ref or die "need --ref <reference.fa>";
+$bam or die "need --bam <alignments.bam>";
+
+my $opt = $html ? '-d H' : '-d T';
+
+print STDERR "Parsing: $vcf\n";
+open VCF, '<', $vcf;
+while (<VCF>) {
+  next if m/^#/;
+  chomp;
+
+  # [VCF] CHROM POS ID REF ALT QUAL FILTER INFO FORMAT unknown
+  my($chr,$pos,undef,$refb,$alt,$qual) = split m/\t/;
+
+  my $desc = "$chr  $pos  $refb => $alt  Q=$qual";
+  my $begin = max(1, $pos-40); # put our SNP in the centre of the screen
+
+  if ($html) {
+    print "<HR>\n<H1>$desc</H1>\n";
+    print "<P><TT>$</TT></P>\n";
+  }
+  else {
+    print "\n\n\n", "-"x80, "\n$desc\n\n";
+  }
+
+  my $cmd = "samtools tview -p '$chr:$begin' $opt $bam $ref";
+  system($cmd)==0 or die "Could not run: $cmd";
+}
+
+#----------------------------------------------------------------------
+# Option setting routines
+
+sub setOptions {
+  use Getopt::Long;
+
+  @Options = (
+    {OPT=>"help!",     VAR=>\&usage,                DESC=>"This help"},
+    {OPT=>"debug!",    VAR=>\$debug,   DEFAULT=>0 , DESC=>"Output verbose debug info"},
+    {OPT=>"vcf=s",     VAR=>\$vcf,     DEFAULT=>'', DESC=>"VCF input file"},
+    {OPT=>"bam=s",     VAR=>\$bam,     DEFAULT=>'', DESC=>"BAM alignments"},
+    {OPT=>"ref=s",     VAR=>\$ref,     DEFAULT=>'', DESC=>"FASTA reference"},
+    {OPT=>"html!",     VAR=>\$html,    DEFAULT=>0 , DESC=>"Write a HTML report instead of TXT"},
+  );
+
+  (!@ARGV) && (usage());
+
+  &GetOptions(map {$_->{OPT}, $_->{VAR}} @Options) || usage();
+
+  # Now setup default values.
+  foreach (@Options) {
+    if (defined($_->{DEFAULT}) && !defined(${$_->{VAR}})) {
+      ${$_->{VAR}} = $_->{DEFAULT};
+    }
+  }
+}
+
+sub usage {
+  print STDERR "Synopsis:\n  Convert a VCF (haploid) into TSV with column breakdown\n";
+  print STDERR "Usage:\n  $0 [options] --vcf snps.vcf --bam alignments.bam --ref reference.fa > snps.csv\n";
+  print STDERR "Options:\n";
+  foreach (@Options) {
+    printf STDERR "  --%-13s %s%s.\n",$_->{OPT},$_->{DESC},
+                  defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";
+  }
+  exit(1);
+}
+ 
+#----------------------------------------------------------------------
