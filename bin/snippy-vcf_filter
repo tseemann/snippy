@@ -5,9 +5,10 @@ use List::Util qw(sum);
 use Data::Dumper;
 use FindBin;
 
-my(@Options, $noindels, $majority, $prob);
+my(@Options, $noindels, $majority);
 setOptions();
 
+my $source = '';
 my $total=0;
 my $passed=0;
 
@@ -18,7 +19,15 @@ while (my $line = <>)
     print $line;
     if ($line =~ m/^##fileformat=/) {
       my $cmd = $FindBin::Script;
-      print "##snippyCommand=$cmd --maj $majority --prob $prob\n";
+      print "##snippyCommand=@ARGV\n";
+    }
+    elsif ($line =~ m/^##source=freebayes/i) {
+      $source = 'freebayes';
+      print STDERR "This is a $source VCF file.\n";
+    }
+    elsif ($line =~ m/^##samtools/i) {
+      $source = 'samtools';
+      print STDERR "This is a $source VCF file.\n";
     }
   }
   else 
@@ -26,10 +35,8 @@ while (my $line = <>)
     chomp $line;
 
     # CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT unknown
-    my($seq,$pos,undef,$ref,$alt,undef,undef,$tags,$format,$data) = split m/\t/, $line;
+    my($seq,$pos,undef,$ref,$alt,$qual,undef,$tags,$format,$data) = split m/\t/, $line;
     $total++;
-
-#    if (! defined $pos) { print STDERR "ERROR: $line"; exit -1; }
 
     $ref = uc($ref);
     $alt = uc($alt);
@@ -43,52 +50,84 @@ while (my $line = <>)
       print STDERR "$seq:$pos - does not have a FORMAT column: $line\n";
       next;
     }
-
-    if ($format ne 'PL') {
-      print STDERR "$seq:$pos - FORMAT column not 'PL': $format | $data\n";
-      next;
-    }
-
-    # PL=0 just means the prob is very high and effectively p=1 (PL=255 is p=0)
-    my @var = split m/,/, $data;  # RR,RA,AA likelihoods
-
-    if (@var != 3) {
-      print STDERR "$seq:$pos - didn't find 3 likelihoods in DATA column: @var\n";
-      next;
-    }
-   
-#    unless ($var[0] > 200 and $var[2] == 0) {
-    unless ($var[2] == 0 and $var[1] >= 200) {
-      print STDERR "$seq:$pos - 'homozygous' probability not convincing enough: $data\n";
-      next;
-    } 
-   
-#    @var = map { 10 ** (-$_/10) } @var; # hi-res phred encoding of probs
-#    if ($var[2] > $prob && $var[1] < 1.0-$prob && $var[0] < 1.0-$prob) {
-#      # ok
-#    } 
-#    else {
-#      print STDERR "$seq:$pos - PL homozygous likelihood too low: $var[1] $var[2] [$data]\n";
-#      next;
-#    }
-
+    
     my $tag = vcf_tags_to_hash($tags);
+    my $data = vcf_format_data_to_hash($format, $data);
+
+    if ($source eq 'samtools') {
+
+      ### Special processing for samtools/bcftools VCF output  
+       
+      if (not exists $data->{PL}) {
+        print STDERR "$seq:$pos - no PL in FORMAT column: $format | $data\n";
+        next;
+      }
+
+      # PL=0 just means the prob is very high and effectively p=1 (PL=255 is p=0)
+      my @var = split m/,/, $data->{PL};  # RR,RA,AA likelihoods
+
+      if (@var != 3) {
+        print STDERR "$seq:$pos - didn't find 3 likelihoods in PL data: @var\n";
+        next;
+      }
+     
+      unless ($var[2] == 0 and $var[1] >= 200) {
+        print STDERR "$seq:$pos - 'homozygous' probability not convincing enough: $data\n";
+        next;
+      } 
+
+      if ($noindels and exists $tag->{INDEL}) {
+        print STDERR "$seq:$pos - user requested to exclude INDELs\n";
+        next;
+      }
     
-    if ($noindels and exists $tag->{INDEL}) {
-      print STDERR "$seq:$pos - user requested to exclude INDELs\n";
-      next;
+    
     }
+    elsif ($source eq 'freebayes') {
     
-    my $depth = $tag->{DP};
+      ### Special processing for FreeBayes VCF output  
+
+      if ($qual < 20) {
+        print STDERR "$seq:$pos - QUAL $qual is too low\n";
+        next;
+      }
+
+#      if ($data->{GQ} < 30) {
+#        print STDERR "$seq:$pos - GQ is too low: $data->{GQ}\n";
+#        next;
+#      }
+      
+      if ($data->{AO} < $majority * $data->{DP}) {
+        print STDERR "$seq:$pos - ALT($data->{AO}) < $majority * DP($data->{DP})\n";
+        next;
+      }
+      
+      if ($noindels and $tag->{TYPE} !~ m/^[sm]np$/) {
+        print STDERR "$seq:$pos - user requested to exclude INDELs\n";
+        next;
+      }
+
+      
+    }
+    else {
+      
+      ### Unrecognized VCF file source
+      
+      print STDERR "ERROR: this VCF file is not from BCFtools or FreeBayes.\n";
+      exit -1;
+    
+    }
+   
+    print STDERR Dumper($seq, $pos, $tag, $data);
 
     $passed++;
-    print STDERR "$seq:$pos - passed #$passed: $ref=>$alt depth=$depth\n";
+    print STDERR "$seq:$pos - passed #$passed: $ref=>$alt\n";
 
     print $line, "\n";
   }
 }
 
-print STDERR "Passed $passed of $total variants\n";
+print STDERR "Passed $passed of $total variants (source: $source)\n";
 
 #----------------------------------------------------------------------
 # name1=tag1;name2;name3=tag3
@@ -105,6 +144,20 @@ sub vcf_tags_to_hash {
 }
 
 #----------------------------------------------------------------------
+# tag1:tag2:tag3  value1:value2:value3
+
+sub vcf_format_data_to_hash {
+  my($f,$d) = @_;
+  my @f = split m/:/, $f;
+  my @d = split m/:/, $d;
+  my %tag;
+  for my $i (0 .. $#f) {
+    $tag{ $f[$i] } = $d[$i];
+  }
+  return \%tag;  
+}
+
+#----------------------------------------------------------------------
 # Option setting routines
 
 sub setOptions {
@@ -112,10 +165,8 @@ sub setOptions {
 
   @Options = (
     {OPT=>"help",      VAR=>\&usage,                DESC=>"This help"},
-#    {OPT=>"mindepth=i",  VAR=>\$mindepth,   DEFAULT=>3, DESC=>"Minimum depth required"},
-    {OPT=>"majority=f",  VAR=>\$majority,   DEFAULT=>0.9, DESC=>"Majority required"},
-    {OPT=>"probability=f",  VAR=>\$prob,   DEFAULT=>0.99, DESC=>"Probability of variant"},
-    {OPT=>"noindels!",    VAR=>\$noindels,   DEFAULT=>0, DESC=>"Don't call INDELS too"},
+    {OPT=>"majority=f",  VAR=>\$majority,   DEFAULT=>0.85, DESC=>"Majority required"},
+    {OPT=>"noindels!",    VAR=>\$noindels,   DEFAULT=>0, DESC=>"Do not output INDELs"},
   );
 
   #(!@ARGV) && (usage());

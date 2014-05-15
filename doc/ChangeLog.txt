@@ -1,6 +1,16 @@
 
-v1.2 - XXX
-----------
+v1.3 - Tue 22 Oct 2013
+----------------------
+* MAJOR: switched back to FreeBayes 
+* put freebayes binary in binaries/linux/
+* noticed bug with \n\r Fasta references in freebayes
+* snippy-vcf_filter: support BCFtools and FreeBayes VCF tags
+* snippy-vcf_tsv: support FreeBayes TYPE=xxx tag
+* removed unused parameters to snippy-vcf_filter (--prob, --conf)
+
+
+v1.2 - Mon 21 Oct 2013
+----------------------
 * moved 'vcfutils.pl varFilter' from pipe to separate command
 * save raw.vcf AND filtered.vcf now (before final filtered snps.vcf)
 * tell user how many variants were found

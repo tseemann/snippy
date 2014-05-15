@@ -29,12 +29,18 @@ open VCF, '<', $vcf;
 while (<VCF>) {
   next if m/^#/;
   chomp;
-  # [VCF] CHROM POS ID REF ALT QUAL FILTER INFO FORMAT unknown
-  my($chr,$pos,undef,$ref,$alt) = split m/\t/;
+  # [VCF] CHROM POS ID REF ALT QUAL FILTER INFO [FORMAT DATA DATA2 ...]
+  my($chr,$pos,undef,$ref,$alt,undef,undef,$tags) = split m/\t/;
   # [BED] CHROM START(0-based) END(exclusive,not inclusive)
   print $bedfh $chr,"\t",$pos-1,"\t",$pos,"\n";
   # [CSV] CHROM POS TYPE REF ALT BASEDIST
-  my $type = $type_of{ length($ref) <=> length($alt) } ;
+  my $type;
+  if ($tags =~ m/\bTYPE=(\w+)\b/) {
+    $type = $1;
+  } 
+  else {
+    $type = $type_of{ length($ref) <=> length($alt) } ;
+  }
   push @snp, [ $chr, $pos, $type, uc($ref), uc($alt) ];
 }
 $bedfh->flush;
