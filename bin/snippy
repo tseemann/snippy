@@ -12,7 +12,7 @@ use File::Spec qw();
 
 my $EXE = $FindBin::RealScript;
 my $HOMEDIR = $FindBin::Bin;
-my $VERSION = "1.3";
+my $VERSION = "1.4-dev";
 my $SYNOPSIS = "Fast bacterial SNP/INDEL calling from NGS reads";
 my $AUTHOR = 'Torsten Seemann <torsten.seemann@monash.edu>';
 my $URL = 'http://www.vicbioinformatics.com';
@@ -44,7 +44,9 @@ $ENV{PATH} .= ":$HOMEDIR/binaries/$OPSYS:$HOMEDIR/binaries/noarch";
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # check for needed exes
 
-for my $exe (qw(cp awk renice bwa samtools bcftools freebayes vcfutils.pl snippy-vcf_filter snippy-vcf_tsv snippy-vcf_report)) {
+for my $exe (qw(cp rm awk renice bwa samtools vcfutils.pl
+                freebayes-parallel fasta_generate_regions.py vcfstreamsort vcfuniq parallel  
+                snippy-vcf_filter snippy-vcf_tsv snippy-vcf_report)) {
   system("which $exe > /dev/null")==0 or err("Can not find '$exe' in PATH");
   msg("Found $exe - ok.");
 }
@@ -59,6 +61,10 @@ msg("Using reference: $reference");
 
 $threads > 0 or err("Invalid --threads $threads");
 msg("Will use $threads threads");
+
+my $refsize = -s $reference; # rough size in bases
+my $refchunksize = int( $refsize / $threads / 2 );
+msg("Reference is approximately $refsize bp, will chunk into $refchunksize bp.");
 
 @ARGV = map { File::Spec->rel2abs($_) } @ARGV;
 my @reads = shift @ARGV;
@@ -108,7 +114,10 @@ my @cmd = (
   "samtools index aln.bam",
   "samtools depth aln.bam | awk '{ s+=\$3 ; n++ } END { print s/n }' > depth.txt",
 ##  "( samtools mpileup $mpileopt -B -q $mapqual -g -u -f ref.fa aln.bam | bcftools view -c -v - ) > raw.vcf",
-  "freebayes -d -p 1 -f ref.fa --standard-filters aln.bam > raw.vcf",
+#  "freebayes -d -p 1 -f ref.fa --standard-filters aln.bam > raw.vcf",
+  "fasta_generate_regions.py ref.fa.fai $refchunksize > regions.txt",
+  "freebayes-parallel regions.txt $threads -p 1 -f ref.fa --standard-filters aln.bam > raw.vcf",
+  "rm -f regions.txt",
   "vcfutils.pl varFilter -Q 30 raw.vcf > filtered.vcf",
   "snippy-vcf_filter filtered.vcf > snps.vcf",
   "snippy-vcf_tsv --vcf snps.vcf --ref ref.fa --bam aln.bam > snps.csv",
