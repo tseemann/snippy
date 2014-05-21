@@ -148,7 +148,7 @@ my @cmd = (
   "rm -fv regions.txt",
   "vcfutils.pl varFilter -Q 30 raw.vcf > filtered.vcf",
   "snippy-vcf_filter filtered.vcf > snps.vcf",
-  "snippy-vcf_tsv --vcf snps.vcf --ref ref.fa --bam aln.bam > snps.csv",
+  "snippy-vcf_tsv --auto > snps.csv",
 );
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 

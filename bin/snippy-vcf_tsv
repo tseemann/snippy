@@ -4,20 +4,45 @@ use strict;
 use File::Temp;
 use Data::Dumper;
 use IO::Handle;
+use Bio::Tools::GFF;
 use Fatal;
 
-my(@Options, $debug, $auto, $vcf, $ref, $bam);
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# Command line checking
+
+my(@Options, $debug, $auto, $vcf, $ref, $bam, $gff);
 setOptions();
 
 if ($auto) {
   $vcf ||= 'snps.vcf';
   $ref ||= 'ref.fa';
   $bam ||= 'aln.bam';
+  $gff ||= 'ref.gff';
 }
 
 $vcf or die "need --vcf <snps.vcf>";
 $ref or die "need --ref <reference.fa>";
 $bam or die "need --bam <alignments.bam>";
+#$gff or die "need --gff <alignments.bam>";
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# Create an index of seq:pos => feature
+
+my %feat;
+my %olap;
+my $nfeat=0;
+if ($gff) {
+  my $in = Bio::Tools::GFF->new(-file=>$gff, -gff_version=>3);
+  while (my $f = $in->next_feature) {
+    $feat{++$nfeat} = $f;
+    for my $pos ($f->start .. $f->end) {
+      $olap{$f->seq_id}->[$pos] = $nfeat;  # FIXME: should be push()
+    }
+  }
+}
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# Create a SNP table file
 
 my %type_of = (0=>'snp', -1=>'ins', +1=>'del');
 
@@ -47,7 +72,7 @@ $bedfh->flush;
 my $total = scalar(@snp);
 print STDERR "Writing: temporary BED file with $total lines\n";
 
-print join("\t", qw(CHROM POS TYPE REF ALT EVIDENCE)),"\n";
+print join("\t", qw(CHROM POS TYPE REF ALT EVIDENCE FEATURES)),"\n";
 my $count=0;
 my $bed = $bedfh->filename;
 my $cmd = "samtools mpileup -q 10 -f $ref -l $bed $bam";
@@ -78,8 +103,16 @@ while (<MPU>)
 
   my $basedist = join(' ', map { $freq{$_} ? "$_:".$freq{$_} : '' } 
                       sort { $freq{$b} <=> $freq{$a} } keys %freq);
+ 
+  my $aff = '';
+  my $aff_featid =  $olap{ $snp[$count][0] }[ $snp[$count][1] ]; # 0=seqid 1=pos
+  if ($aff_featid) {
+    my $f = $feat{$aff_featid};
+    $aff = join(' ', $f->primary_tag, 
+      map { $f->get_tag_values($_) if $f->has_tag($_) } qw(locus_tag protein_id gene product) )   
+  }
 
-  print join("\t", @{$snp[$count]}, $basedist),"\n";
+  print join("\t", @{$snp[$count]}, $basedist, $aff),"\n";
   $count++;  
   print STDERR "Processed: [$count/$total]: ",join(' ', @{$snp[$count-1]}),"\n" if $debug;
 }
@@ -127,10 +160,11 @@ sub setOptions {
   @Options = (
     {OPT=>"help!",     VAR=>\&usage,                DESC=>"This help"},
     {OPT=>"debug!",    VAR=>\$debug,   DEFAULT=>0,  DESC=>"Output verbose debug info"},
-    {OPT=>"auto!",     VAR=>\$auto,    DEFAULT=>0 , DESC=>"Autoset --vcf/bam/ref to snippy names"},
+    {OPT=>"auto!",     VAR=>\$auto,    DEFAULT=>0 , DESC=>"Autoset --vcf/bam/ref/gff to snippy names"},
     {OPT=>"vcf=s",     VAR=>\$vcf,     DEFAULT=>'', DESC=>"VCF input file"},
     {OPT=>"bam=s",     VAR=>\$bam,     DEFAULT=>'', DESC=>"BAM alignments"},
-    {OPT=>"ref=s",     VAR=>\$ref,     DEFAULT=>'', DESC=>"FASTA reference"},
+    {OPT=>"ref=s",     VAR=>\$ref,     DEFAULT=>'', DESC=>"FASTA reference sequence"},
+    {OPT=>"gff=s",     VAR=>\$gff,     DEFAULT=>'', DESC=>"GFF reference features"},
   );
 
   (!@ARGV) && (usage());
