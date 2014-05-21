@@ -117,7 +117,7 @@ my @cmd = (
 #  "freebayes -d -p 1 -f ref.fa --standard-filters aln.bam > raw.vcf",
   "fasta_generate_regions.py ref.fa.fai $refchunksize > regions.txt",
   "freebayes-parallel regions.txt $threads -p 1 -f ref.fa --standard-filters aln.bam > raw.vcf",
-  "rm -f regions.txt",
+  "rm -fv regions.txt",
   "vcfutils.pl varFilter -Q 30 raw.vcf > filtered.vcf",
   "snippy-vcf_filter filtered.vcf > snps.vcf",
   "snippy-vcf_tsv --vcf snps.vcf --ref ref.fa --bam aln.bam > snps.csv",

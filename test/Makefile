@@ -1,7 +1,21 @@
 
-all:
+
+test1:
+	../bin/snippy --outdir test1 --force --ref example.fna reads_R1.fastq.gz reads_R2.fastq.gz
+
+test2:
+	../bin/snippy --report --outdir test2 --force --ref example.fna reads_R1.fastq.gz reads_R2.fastq.gz
+
+test3:
+	../bin/snippy --report --outdir test3 --force --ref example.gbk reads_R1.fastq.gz reads_R2.fastq.gz
+
+test4:
+	../bin/snippy --report --outdir test4 --force --ref example.gbk reads_R1.fastq.gz
+
+data:
 	rm -f reads*
-	fq-simulate_illumina_reads.pl --ref example.fna --len 150 --cov 40 --indels --ambig --prefix reads
-	rm -f reads.log
-	gzip reads*.fastq
+	ln -sf example.fna example.fa
+	fq-simulate_illumina_reads.pl --ref example.fa --len 150 --cov 40 --indels --ambig --prefix reads
+	rm -f reads.log example.fa
+	pigz reads*.fastq
 	
