@@ -6,6 +6,7 @@ use Time::Piece;
 use Time::Seconds;
 use File::Path qw(make_path remove_tree);
 use File::Spec qw();
+use Bio::SeqIO;
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # global variables
@@ -94,6 +95,19 @@ else {
 chdir($outdir);
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# load the reference, now support all formats Bioperl can load
+
+msg("Extracting FASTA from reference...");
+my $in = Bio::SeqIO->new(-file=>$reference) or err("Could not guess file format: $reference");
+my $out = Bio::SeqIO->new(-file=>">ref.fa", -format=>'fasta');
+my $nseq = 0;
+while (my $seq = $in->next_seq) {
+  $out->write_seq($seq);
+  $nseq++;
+}
+msg("Wrote $nseq sequences to ref.fa");
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # prepare the commands
 
 my $bwaopt = $correcting ? '-k 19 -B 8 -L 20 -T 30 -U 50 -c 100' : '-k 16';
@@ -105,7 +119,7 @@ my $mpileopt = $noindels ? "-I" : "";
 
 my @cmd = (
   "renice -n 10 $$ >> $ERRORLOG",
-  "cp \Q$reference\E ref.fa",
+##  "cp \Q$reference\E ref.fa",
   "samtools faidx ref.fa",
   "bwa index ref.fa",
   "(bwa mem $bwaopt -t $threads ref.fa @reads"
@@ -251,7 +265,7 @@ sub setOptions {
     {OPT=>"citation",VAR=>\&show_citation,     DESC=>"Print citation for referencing $EXE"},
     {OPT=>"quiet!",  VAR=>\$quiet, DEFAULT=>0, DESC=>"No screen output"},
     {OPT=>"threads=i",  VAR=>\$threads, DEFAULT=>8,  DESC=>"Number of threads for bwa/samtools"},
-    {OPT=>"reference=s",  VAR=>\$reference, DEFAULT=>'',  DESC=>"Reference FASTA file"},
+    {OPT=>"reference=s",  VAR=>\$reference, DEFAULT=>'',  DESC=>"Reference genome. Supports FASTA, GenBank, EMBL (not GFF)"},
     {OPT=>"outdir=s",  VAR=>\$outdir, DEFAULT=>'',  DESC=>"Output folder"},
     {OPT=>"force!",  VAR=>\$force, DEFAULT=>0,  DESC=>"Force overwrite of existing output folder"},
     {OPT=>"interleaved!",  VAR=>\$interleaved, DEFAULT=>0,  DESC=>"Single input file is interleaved pairs, not singles"},
@@ -280,9 +294,9 @@ sub usage {
   print STDERR "Synopsis:\n  $EXE $VERSION - $SYNOPSIS\n",
                "Author:\n  $AUTHOR\n",
                "Usage:\n",  
-               "  $EXE [options] --ref <ref.fasta> <R1.fq.gz> <R2.fq.gz>\n",
-               "  $EXE [options] --ref <ref.fasta> --interleaved <shuffledPairs.fq>\n",
-               "  $EXE [options] --ref <ref.fasta> <SE.fasta>\n",
+               "  $EXE [options] --ref <ref> <R1.fq.gz> <R2.fq.gz>\n",
+               "  $EXE [options] --ref <ref> --interleaved <shuffledPairs.fq>\n",
+               "  $EXE [options] --ref <ref> <SE.fasta>\n",
                "";
 
   foreach (@Options) {

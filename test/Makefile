@@ -1,4 +1,5 @@
 
+.PHONY: test1 test2 test3 test4 data
 
 test1:
 	../bin/snippy --outdir test1 --force --ref example.fna reads_R1.fastq.gz reads_R2.fastq.gz
@@ -7,7 +8,7 @@ test2:
 	../bin/snippy --report --outdir test2 --force --ref example.fna reads_R1.fastq.gz reads_R2.fastq.gz
 
 test3:
-	../bin/snippy --report --outdir test3 --force --ref example.gbk reads_R1.fastq.gz reads_R2.fastq.gz
+	../bin/snippy --outdir test3 --force --ref example.gbk reads_R1.fastq.gz reads_R2.fastq.gz
 
 test4:
 	../bin/snippy --report --outdir test4 --force --ref example.gbk reads_R1.fastq.gz
