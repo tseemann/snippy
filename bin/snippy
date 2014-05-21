@@ -140,13 +140,13 @@ my @cmd = (
     ." | samtools view -@ $threads -q $mapqual -S -b -u -T ref.fa -"
     ." | samtools sort -@ $threads -m 1G - aln)",
   "samtools index aln.bam",
-  "samtools depth aln.bam | awk '{ s+=\$3 ; n++ } END { print s/n }' > depth.txt",
+  "samtools depth aln.bam | awk 'BEGIN { OFMT=\"%d\" } { s+=\$3 ; n++ } END { print s/n }' > depth.txt",
 ##  "( samtools mpileup $mpileopt -B -q $mapqual -g -u -f ref.fa aln.bam | bcftools view -c -v - ) > raw.vcf",
 #  "freebayes -d -p 1 -f ref.fa --standard-filters aln.bam > raw.vcf",
   "fasta_generate_regions.py ref.fa.fai $refchunksize > regions.txt",
   "freebayes-parallel regions.txt $threads -p 1 -f ref.fa --standard-filters aln.bam > raw.vcf",
   "rm -fv regions.txt",
-  "vcfutils.pl varFilter -Q 30 raw.vcf > filtered.vcf",
+  "vcfutils.pl varFilter -Q 30 -d 3 -D \$((2*\$(cat depth.txt))) raw.vcf > filtered.vcf", #FIXME: replace -D with depth.txt * 2 ?
   "$HOMEDIR/snippy-vcf_filter filtered.vcf > snps.vcf",
   "$HOMEDIR/snippy-vcf_tsv --auto > snps.csv",
 );
