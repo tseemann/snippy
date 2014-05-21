@@ -192,7 +192,7 @@ msg("Identified $num_snps variants.");
 
 if ($report) {
   msg("Generating report, please be patient...");
-  system("snippy-vcf_report --bam aln.bam --ref ref.fa --vcf snps.vcf > snps.txt 2>> $ERRORLOG");
+  system("$HOMEDIR/snippy-vcf_report --bam aln.bam --ref ref.fa --vcf snps.vcf > snps.txt 2>> $ERRORLOG");
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
