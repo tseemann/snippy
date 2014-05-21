@@ -147,8 +147,8 @@ my @cmd = (
   "freebayes-parallel regions.txt $threads -p 1 -f ref.fa --standard-filters aln.bam > raw.vcf",
   "rm -fv regions.txt",
   "vcfutils.pl varFilter -Q 30 raw.vcf > filtered.vcf",
-  "snippy-vcf_filter filtered.vcf > snps.vcf",
-  "snippy-vcf_tsv --auto > snps.csv",
+  "$HOMEDIR/snippy-vcf_filter filtered.vcf > snps.vcf",
+  "$HOMEDIR/snippy-vcf_tsv --auto > snps.csv",
 );
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
