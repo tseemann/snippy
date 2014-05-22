@@ -1,8 +1,18 @@
 
-v1.4 - XXX XX XXX 2014
+TODO
+----
+* Issues with 'complex' type EVIDENCE column
+* Parallelize the mpileup steps and --report steps
+
+
+v1.4 - Thu 22 May 2014
 ----------------------
 * updated freebayes linux binary (failed to compile for darwin)
+* include extra vcf tools for linux (not compiled for darwin)
 * switched to paralell-freebayes
+* support for different format references, not just fasta
+* extra column in .tsv output with gene/feature affected by SNP
+* filter out SNPs from regions > 2x average depth, likely repeats
 
 v1.3 - Tue 22 Oct 2013
 ----------------------
@@ -37,5 +47,4 @@ v1.1 - Tue 8 Oct 2013
 v1.0 - Sun 15 Sep 2013
 -----------------------
 * first release
-
 
