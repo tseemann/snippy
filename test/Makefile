@@ -20,3 +20,6 @@ data:
 	rm -f reads.log example.fa
 	pigz reads*.fastq
 	
+clean:
+	rm -fr ./test?
+	
