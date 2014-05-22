@@ -7,7 +7,7 @@ if [ ! -d "../test" ]; then
   exit 1
 fi
 
-NAME=$(snippy --version 2>&1 | sed 's/ /-/g')
+NAME=$(./snippy --version 2>&1 | sed 's/ /-/g')
 echo "Using name: $NAME"
 
 FOLDER="$DESTDIR/$NAME"
