@@ -14,7 +14,7 @@ use Bio::Tools::GFF;
 
 my $EXE = $FindBin::RealScript;
 my $HOMEDIR = $FindBin::Bin;
-my $VERSION = "1.4";
+my $VERSION = "1.5-alpha";
 my $SYNOPSIS = "Fast bacterial SNP/INDEL calling from NGS reads";
 my $AUTHOR = 'Torsten Seemann <torsten.seemann@monash.edu>';
 my $URL = 'http://www.vicbioinformatics.com';
