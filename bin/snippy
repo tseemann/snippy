@@ -41,7 +41,7 @@ msg("Detected operating system: $OPSYS");
 # give access to bundled tools (at end of PATH)
 
 msg("Enabling bundled tools in: $HOMEDIR/binaries/{$OPSYS,noarch}");
-$ENV{PATH} .= ":$HOMEDIR/binaries/$OPSYS:$HOMEDIR/binaries/noarch";
+$ENV{PATH} .= ":$HOMEDIR/../binaries/$OPSYS:$HOMEDIR/../binaries/noarch";
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # check for needed exes
