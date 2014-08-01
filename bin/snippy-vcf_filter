@@ -35,7 +35,7 @@ while (my $line = <>)
     chomp $line;
 
     # CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT unknown
-    my($seq,$pos,undef,$ref,$alt,$qual,undef,$tags,$format,$data) = split m/\t/, $line;
+    my($seq,$pos,undef,$ref,$alt,$qual,undef,$tags,$format,$data_block) = split m/\t/, $line;
     $total++;
 
     $ref = uc($ref);
@@ -52,14 +52,14 @@ while (my $line = <>)
     }
     
     my $tag = vcf_tags_to_hash($tags);
-    my $data = vcf_format_data_to_hash($format, $data);
+    my $data = vcf_format_data_to_hash($format, $data_block);
 
     if ($source eq 'samtools') {
 
       ### Special processing for samtools/bcftools VCF output  
        
       if (not exists $data->{PL}) {
-        print STDERR "$seq:$pos - no PL in FORMAT column: $format | $data\n";
+        print STDERR "$seq:$pos - no PL in FORMAT column: $format | $data_block\n";
         next;
       }
 
@@ -72,7 +72,7 @@ while (my $line = <>)
       }
      
       unless ($var[2] == 0 and $var[1] >= 200) {
-        print STDERR "$seq:$pos - 'homozygous' probability not convincing enough: $data\n";
+        print STDERR "$seq:$pos - 'homozygous' probability not convincing enough: $data_block\n";
         next;
       } 
 
@@ -118,7 +118,7 @@ while (my $line = <>)
     
     }
    
-    print STDERR Dumper($seq, $pos, $tag, $data);
+    # print STDERR Dumper($seq, $pos, $tag, $data_block);
 
     $passed++;
     print STDERR "$seq:$pos - passed #$passed: $ref=>$alt\n";
