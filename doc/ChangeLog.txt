@@ -3,7 +3,12 @@ TODO
 ----
 * Issues with 'complex' type EVIDENCE column
 * Parallelize the mpileup steps and --report steps
+* Can't locate "Time/Piece.pm" [Sima Tokajian] not std on older Perl
+* Fix bug with freebayes running single + parallel
 
+v1.5 - XXX XX XXX 2014
+----------------------
+* 
 
 v1.4 - Thu 22 May 2014
 ----------------------
