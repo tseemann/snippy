@@ -1,6 +1,10 @@
 
 .PHONY: test1 test2 test3 test4 data
 
+quick: test3
+
+all: test1 test2 test3 test4
+
 test1:
 	../bin/snippy --outdir test1 --force --ref example.fna reads_R1.fastq.gz reads_R2.fastq.gz
 
