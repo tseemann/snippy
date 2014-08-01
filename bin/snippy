@@ -47,7 +47,7 @@ $ENV{PATH} .= ":$HOMEDIR/binaries/$OPSYS:$HOMEDIR/binaries/noarch";
 # check for needed exes
 
 for my $exe (qw(cp rm awk renice bwa samtools vcfutils.pl
-                freebayes-parallel fasta_generate_regions.py vcfstreamsort vcfuniq parallel  
+                freebayes-parallel-snippy fasta_generate_regions.py vcfstreamsort vcfuniq parallel  
                 snippy-vcf_filter snippy-vcf_tsv snippy-vcf_report)) {
   system("which $exe > /dev/null")==0 or err("Can not find '$exe' in PATH");
   msg("Found $exe - ok.");
@@ -144,7 +144,7 @@ my @cmd = (
 ##  "( samtools mpileup $mpileopt -B -q $mapqual -g -u -f ref.fa aln.bam | bcftools view -c -v - ) > raw.vcf",
 #  "freebayes -d -p 1 -f ref.fa --standard-filters aln.bam > raw.vcf",
   "fasta_generate_regions.py ref.fa.fai $refchunksize > regions.txt",
-  "freebayes-parallel regions.txt $threads -p 1 -f ref.fa --standard-filters aln.bam > raw.vcf",
+  "freebayes-parallel-snippy regions.txt $threads -p 1 -f ref.fa --standard-filters aln.bam > raw.vcf",
   "rm -fv regions.txt",
   "vcfutils.pl varFilter -Q 30 -d 3 -D \$((2*\$(cat depth.txt))) raw.vcf > filtered.vcf", #FIXME: replace -D with depth.txt * 2 ?
   "$HOMEDIR/snippy-vcf_filter filtered.vcf > snps.vcf",
