@@ -25,7 +25,8 @@ my $t0 = localtime;
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # command line options
 
-my(@Options, $quiet, $force, $outdir, $reference, $threads, $mapqual, $report,
+my(@Options, $quiet, $force, $outdir, $reference, $threads, $report,
+             $mapqual, $mincov, $minfrac, $rgid,
              $interleaved, $correcting, $noindels, $cleanup);
 setOptions();
 
@@ -49,7 +50,7 @@ $ENV{PATH} = "$BINDIR:"
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # check for needed exes
 
-for my $exe (qw(cp rm awk renice bwa samtools 
+for my $exe (qw(cp rm awk renice bwa samtools
                 parallel freebayes snippy-freebayes-parallel fasta_generate_regions.py 
                 vcfstreamsort vcfuniq vcffirstheader
                 snippy-vcf_filter snippy-vcf_tsv snippy-vcf_report)) {
@@ -126,29 +127,33 @@ msg("Wrote $nseq sequences to ref.fa");
 msg("Wrote $nfeat features to ref.gff");
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
-# prepare the commands
+# prepare the command options
 
-my $bwaopt = $correcting ? '-k 19 -B 8 -L 20 -T 30 -U 50 -c 100' : '-k 16';
+$rgid || = "@reads";
+msg("Using BAM \@RG ID: $rgid");
+
+my $bwaopt = qq{-M -R '\@RG\tID:$rgid'};
+$bwaopt .= '-k 19 -B 8 -L 20 -T 30 -U 50 -c 100' if $correcting;
 $bwaopt .= ' -p' if $interleaved;
 
 my $tsvopt = $noindels ? '--noindels' : '';
 
-my $mpileopt = $noindels ? "-I" : "";
+my $fbopt = "-p 1 -q 20 -m $mapqual -F $minfrac -C $mincov -V";
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# prepare the commands
 
 my @cmd = (
-  "renice -n 10 $$ >> $ERRORLOG",
-##  "cp \Q$reference\E ref.fa",
+##  "renice -n 10 $$ >> $ERRORLOG",
   "samtools faidx ref.fa",
   "bwa index ref.fa",
   "(bwa mem $bwaopt -t $threads ref.fa @reads"
-    ." | samtools view -@ $threads -q $mapqual -S -b -u -T ref.fa -"
-    ." | samtools sort -@ $threads -m 1G - aln)",
+    ." | samtools view -@ $threads -q $mapqual -F 3844 -S -b -u -T ref.fa -"
+    ." | samtools sort -@ $threads - aln)",
   "samtools index aln.bam",
-  "samtools depth aln.bam | awk 'BEGIN { OFMT=\"%d\" } { s+=\$3 ; n++ } END { print s/n }' > depth.txt",
-##  "( samtools mpileup $mpileopt -B -q $mapqual -g -u -f ref.fa aln.bam | bcftools view -c -v - ) > raw.vcf",
-#  "freebayes -d -p 1 -f ref.fa --standard-filters aln.bam > raw.vcf",
+##  "samtools depth aln.bam | awk 'BEGIN { OFMT=\"%d\" } { s+=\$3 ; n++ } END { print s/n }' > depth.txt",
   "fasta_generate_regions.py ref.fa.fai $refchunksize > regions.txt",
-  "$BINDIR/snippy-freebayes-parallel regions.txt $threads -p 1 -f ref.fa --standard-filters aln.bam > raw.vcf",
+  "$BINDIR/snippy-freebayes-parallel regions.txt $threads $fbopt -f ref.fa aln.bam > raw.vcf",
   "rm -fv regions.txt",
   "$BINDIR/snippy-vcf_filter raw.vcf > snps.vcf",
   "$BINDIR/snippy-vcf_tsv --auto > snps.csv",
@@ -288,8 +293,11 @@ sub setOptions {
     {OPT=>"interleaved!",  VAR=>\$interleaved, DEFAULT=>0,  DESC=>"Single input file is interleaved pairs, not singles"},
 #    {OPT=>"correcting!",  VAR=>\$correcting, DEFAULT=>0,  DESC=>"Enable if correcting a genome assembled from same reads (EXPERIMENTAL)"},
     {OPT=>"noindels!",  VAR=>\$noindels, DEFAULT=>0,  DESC=>"Only look for substitutions, not indels"},
-    {OPT=>"mapqual=f",  VAR=>\$mapqual, DEFAULT=>10,  DESC=>"Minimum mapping quality to allow"},
+    {OPT=>"mapqual=f",  VAR=>\$mapqual, DEFAULT=>60,  DESC=>"Minimum mapping quality to allow"},
+    {OPT=>"mincov=i",  VAR=>\$mincov, DEFAULT=>10,  DESC=>"Minimum coverage of variant site"},
+    {OPT=>"minfrac=f",  VAR=>\$minfrac, DEFAULT=>0.9,  DESC=>"Minumum proportion for variant evidence"},
     {OPT=>"cleanup!",  VAR=>\$cleanup, DEFAULT=>0,  DESC=>"Remove all non-SNP files: BAMs, indices etc"},
+    {OPT=>"rgid=s",  VAR=>\$rgid, DEFAULT=>'',  DESC=>"Use this \@RG ID: in the BAM header"},
     {OPT=>"report!",  VAR=>\$report, DEFAULT=>0,  DESC=>"Produce long report with visual alignment (slow)"},
   );
 
