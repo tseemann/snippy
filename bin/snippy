@@ -50,7 +50,7 @@ $ENV{PATH} = "$BINDIR:"
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # check for needed exes
 
-for my $exe (qw(cp rm awk renice bwa samtools
+for my $exe (qw(cp rm awk renice bwa samtools tabix bgzip
                 parallel freebayes snippy-freebayes-parallel fasta_generate_regions.py 
                 vcfstreamsort vcfuniq vcffirstheader
                 snippy-vcf_filter snippy-vcf_tsv snippy-vcf_report)) {
@@ -129,10 +129,10 @@ msg("Wrote $nfeat features to ref.gff");
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # prepare the command options
 
-$rgid || = "@reads";
+$rgid ||= "snippy";
 msg("Using BAM \@RG ID: $rgid");
 
-my $bwaopt = qq{-M -R '\@RG\tID:$rgid'};
+my $bwaopt = qq{-M -R '\@RG\tID:$rgid\tSM:$rgid'};
 $bwaopt .= '-k 19 -B 8 -L 20 -T 30 -U 50 -c 100' if $correcting;
 $bwaopt .= ' -p' if $interleaved;
 
@@ -154,8 +154,10 @@ my @cmd = (
 ##  "samtools depth aln.bam | awk 'BEGIN { OFMT=\"%d\" } { s+=\$3 ; n++ } END { print s/n }' > depth.txt",
   "fasta_generate_regions.py ref.fa.fai $refchunksize > regions.txt",
   "$BINDIR/snippy-freebayes-parallel regions.txt $threads $fbopt -f ref.fa aln.bam > raw.vcf",
-  "rm -fv regions.txt",
+  "rm -f regions.txt",
   "$BINDIR/snippy-vcf_filter raw.vcf > snps.vcf",
+  "bgzip -c snps.vcf > snps.vcf.gz",
+  "tabix -p vcf snps.vcf.gz",
   "$BINDIR/snippy-vcf_tsv --auto > snps.csv",
 );
 
