@@ -13,7 +13,7 @@ use Bio::Tools::GFF;
 # global variables
 
 my $EXE = $FindBin::RealScript;
-my $HOMEDIR = $FindBin::Bin;
+my $BINDIR = $FindBin::Bin;
 my $VERSION = "1.5-alpha";
 my $SYNOPSIS = "Fast bacterial SNP/INDEL calling from NGS reads";
 my $AUTHOR = 'Torsten Seemann <torsten.seemann@monash.edu>';
@@ -40,14 +40,18 @@ msg("Detected operating system: $OPSYS");
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # give access to bundled tools (at end of PATH)
 
-msg("Enabling bundled tools in: $HOMEDIR/binaries/{$OPSYS,noarch}");
-$ENV{PATH} .= ":$HOMEDIR/../binaries/$OPSYS:$HOMEDIR/../binaries/noarch";
+msg("Enabling bundled $OPSYS tools.");
+$ENV{PATH} = "$BINDIR:"
+             .$ENV{PATH}
+             .":$BINDIR:$BINDIR/../binaries/$OPSYS"
+             .":$BINDIR/../binaries/noarch";
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # check for needed exes
 
-for my $exe (qw(cp rm awk renice bwa samtools vcfutils.pl
-                freebayes-parallel-snippy fasta_generate_regions.py vcfstreamsort vcfuniq parallel  
+for my $exe (qw(cp rm awk renice bwa samtools 
+                parallel freebayes snippy-freebayes-parallel fasta_generate_regions.py 
+                vcfstreamsort vcfuniq vcffirstheader
                 snippy-vcf_filter snippy-vcf_tsv snippy-vcf_report)) {
   system("which $exe > /dev/null")==0 or err("Can not find '$exe' in PATH");
   msg("Found $exe - ok.");
@@ -144,11 +148,10 @@ my @cmd = (
 ##  "( samtools mpileup $mpileopt -B -q $mapqual -g -u -f ref.fa aln.bam | bcftools view -c -v - ) > raw.vcf",
 #  "freebayes -d -p 1 -f ref.fa --standard-filters aln.bam > raw.vcf",
   "fasta_generate_regions.py ref.fa.fai $refchunksize > regions.txt",
-  "freebayes-parallel-snippy regions.txt $threads -p 1 -f ref.fa --standard-filters aln.bam > raw.vcf",
+  "$BINDIR/snippy-freebayes-parallel regions.txt $threads -p 1 -f ref.fa --standard-filters aln.bam > raw.vcf",
   "rm -fv regions.txt",
-  "vcfutils.pl varFilter -Q 30 -d 3 -D \$((2*\$(cat depth.txt))) raw.vcf > filtered.vcf", #FIXME: replace -D with depth.txt * 2 ?
-  "$HOMEDIR/snippy-vcf_filter filtered.vcf > snps.vcf",
-  "$HOMEDIR/snippy-vcf_tsv --auto > snps.csv",
+  "$BINDIR/snippy-vcf_filter raw.vcf > snps.vcf",
+  "$BINDIR/snippy-vcf_tsv --auto > snps.csv",
 );
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -192,7 +195,7 @@ msg("Identified $num_snps variants.");
 
 if ($report) {
   msg("Generating report, please be patient...");
-  system("$HOMEDIR/snippy-vcf_report --bam aln.bam --ref ref.fa --vcf snps.vcf > snps.txt 2>> $ERRORLOG");
+  system("$BINDIR/snippy-vcf_report --bam aln.bam --ref ref.fa --vcf snps.vcf > snps.txt 2>> $ERRORLOG");
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
