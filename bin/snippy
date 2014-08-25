@@ -53,7 +53,7 @@ $ENV{PATH} = "$BINDIR:"
 for my $exe (qw(cp rm awk renice bwa samtools tabix bgzip
                 parallel freebayes snippy-freebayes-parallel fasta_generate_regions.py 
                 vcfstreamsort vcfuniq vcffirstheader
-                snippy-vcf_filter snippy-vcf_tsv snippy-vcf_report)) {
+                snippy-vcf_tsv snippy-vcf_report)) {
   system("which $exe > /dev/null")==0 or err("Can not find '$exe' in PATH");
   msg("Found $exe - ok.");
 }
@@ -155,7 +155,7 @@ my @cmd = (
   "fasta_generate_regions.py ref.fa.fai $refchunksize > regions.txt",
   "$BINDIR/snippy-freebayes-parallel regions.txt $threads $fbopt -f ref.fa aln.bam > raw.vcf",
   "rm -f regions.txt",
-  "$BINDIR/snippy-vcf_filter raw.vcf > snps.vcf",
+  "cat raw.vcf > snps.vcf",
   "bgzip -c snps.vcf > snps.vcf.gz",
   "tabix -p vcf snps.vcf.gz",
   "$BINDIR/snippy-vcf_tsv --auto > snps.csv",
