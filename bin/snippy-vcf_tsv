@@ -75,7 +75,7 @@ print STDERR "Writing: temporary BED file with $total lines\n";
 print join("\t", qw(CHROM POS TYPE REF ALT EVIDENCE FEATURES)),"\n";
 my $count=0;
 my $bed = $bedfh->filename;
-my $cmd = "samtools mpileup -q 10 -f $ref -l $bed $bam";
+my $cmd = "samtools mpileup -f $ref -l $bed $bam";
 print STDERR "Running: $cmd\n";
 print STDERR "Writing: output TSV file (please wait)\n";
 
@@ -83,6 +83,8 @@ open MPU, "$cmd 2> /dev/null |";
 while (<MPU>) 
 {
   my $col = (split ' ')[4];   # column 4 is base pileup
+
+  $col or die "could not read mpileup: $_";
 
   my %freq = base_distrib($col);
 
