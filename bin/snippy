@@ -52,7 +52,7 @@ $ENV{PATH} = "$BINDIR:"
 
 for my $exe (qw(cp rm awk renice bwa samtools tabix bgzip
                 parallel freebayes freebayes-parallel fasta_generate_regions.py 
-                vcfstreamsort vcfuniq vcffirstheader
+                vcfstreamsort vcfuniq vcffirstheader vcf-consensus
                 snippy-vcf_tsv snippy-vcf_report)) {
   system("which $exe > /dev/null")==0 or err("Can not find '$exe' in PATH");
   msg("Found $exe - ok.");
@@ -159,6 +159,7 @@ my @cmd = (
   "bgzip -c snps.vcf > snps.vcf.gz",
   "tabix -p vcf snps.vcf.gz",
   "$BINDIR/snippy-vcf_tsv --auto > snps.csv",
+  "vcf-consensus snps.vcf.gz < ref.fa > consensus.fa",
 );
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
