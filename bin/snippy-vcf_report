@@ -14,8 +14,8 @@ if ($auto) {
 }
 
 $vcf or die "need --vcf <snps.vcf>";
-$ref or die "need --ref <reference.fa>";
-$bam or die "need --bam <alignments.bam>";
+$ref or die "need --ref <ref.fa>";
+$bam or die "need --bam <aln.bam>";
 
 my $opt = $html ? '-d H' : '-d T';
 
@@ -54,7 +54,7 @@ sub setOptions {
     {OPT=>"help!",     VAR=>\&usage,                DESC=>"This help"},
     {OPT=>"debug!",    VAR=>\$debug,   DEFAULT=>0 , DESC=>"Output verbose debug info"},
     {OPT=>"auto!",     VAR=>\$auto,    DEFAULT=>0 , DESC=>"Autoset --vcf/bam/ref to snippy names"},
-    {OPT=>"vcf=s",     VAR=>\$vcf,     DEFAULT=>'', DESC=>"VCF input file"},
+    {OPT=>"vcf=s",     VAR=>\$vcf,     DEFAULT=>'', DESC=>"VCF input file (raw)"},
     {OPT=>"bam=s",     VAR=>\$bam,     DEFAULT=>'', DESC=>"BAM alignments (indexed)"},
     {OPT=>"ref=s",     VAR=>\$ref,     DEFAULT=>'', DESC=>"FASTA reference (indexed)"},
     {OPT=>"html!",     VAR=>\$html,    DEFAULT=>0 , DESC=>"Write a HTML report instead of TXT"},
@@ -74,7 +74,10 @@ sub setOptions {
 
 sub usage {
   print STDERR "Synopsis:\n  Convert a VCF (haploid) into TSV with column breakdown\n";
-  print STDERR "Usage:\n  $0 [options] --vcf snps.vcf --bam alignments.bam --ref reference.fa > snps.csv\n";
+  print STDERR "Usage:\n";
+  print STDERR "  $0 [options] --auto > snps.txt  # from a snippy folder\n";
+  print STDERR "  $0 [options] --vcf snps.vcf --bam aln.bam --ref ref.fa > snps.txt\n";
+  print STDERR "  $0 [options] --vcf snps.vcf --bam aln.bam --ref ref.fa --html > snps.html\n";
   print STDERR "Options:\n";
   foreach (@Options) {
     printf STDERR "  --%-13s %s%s.\n",$_->{OPT},$_->{DESC},
