@@ -20,7 +20,7 @@ test4:
 data:
 	rm -f reads*
 	ln -sf example.fna example.fa
-	fq-simulate_illumina_reads.pl --ref example.fa --len 150 --cov 40 --indels --ambig --prefix reads
+	fq-simulate_illumina_reads.pl --ref example.fa --len 150 --cov 80 --indels --ambig --prefix reads
 	rm -f reads.log example.fa
 	pigz reads*.fastq
 	
