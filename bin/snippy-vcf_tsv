@@ -31,6 +31,7 @@ my %feat;
 my %olap;
 my $nfeat=0;
 if ($gff) {
+  print STDERR "Loading features: $gff\n";
   my $in = Bio::Tools::GFF->new(-file=>$gff, -gff_version=>3);
   while (my $f = $in->next_feature) {
     $feat{++$nfeat} = $f;
@@ -48,7 +49,9 @@ if ($gff) {
 my $count=0;
 print join("\t", qw(CHROM POS TYPE REF ALT EVIDENCE FEATURES)),"\n";
 
-print STDERR "Parsing: $vcf\n";
+print STDERR "Using reference: $ref\n";
+print STDERR "Using alignements: $bam\n";
+print STDERR "Parsing variants: $vcf\n";
 open VCF, '<', $vcf;
 while (<VCF>) {
   next if m/^#/;
@@ -101,7 +104,7 @@ sub setOptions {
     {OPT=>"debug!",    VAR=>\$debug,   DEFAULT=>0,  DESC=>"Output verbose debug info"},
     {OPT=>"auto!",     VAR=>\$auto,    DEFAULT=>0 , DESC=>"Autoset --vcf/bam/ref/gff to snippy names"},
     {OPT=>"vcf=s",     VAR=>\$vcf,     DEFAULT=>'', DESC=>"VCF input file"},
-    {OPT=>"bam=s",     VAR=>\$bam,     DEFAULT=>'', DESC=>"BAM alignments"},
+    {OPT=>"bam=s",     VAR=>\$bam,     DEFAULT=>'', DESC=>"BAM alignment"},
     {OPT=>"ref=s",     VAR=>\$ref,     DEFAULT=>'', DESC=>"FASTA reference sequence"},
     {OPT=>"gff=s",     VAR=>\$gff,     DEFAULT=>'', DESC=>"GFF reference features"},
   );
@@ -120,7 +123,7 @@ sub setOptions {
 
 sub usage {
   print STDERR "Synopsis:\n  Convert a VCF (haploid) into TSV with column breakdown\n";
-  print STDERR "Usage:\n  $0 [options] --vcf snps.vcf --bam alignments.bam --ref reference.fa > snps.csv\n";
+  print STDERR "Usage:\n  $0 [options] --vcf snps.vcf --bam aln.bam --ref ref.fa > snps.csv\n";
   print STDERR "Options:\n";
   foreach (@Options) {
     printf STDERR "  --%-13s %s%s.\n",$_->{OPT},$_->{DESC},
