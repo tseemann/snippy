@@ -52,7 +52,7 @@ $ENV{PATH} = "$BINDIR:"
 
 for my $exe (qw(cp rm awk renice bwa samtools tabix bgzip
                 parallel freebayes freebayes-parallel fasta_generate_regions.py 
-                vcfstreamsort vcfuniq vcffirstheader vcf-consensus
+                vcffilter vcfstreamsort vcfuniq vcffirstheader vcf-consensus
                 snippy-vcf_tsv snippy-vcf_report)) {
   system("which $exe > /dev/null")==0 or err("Can not find '$exe' in PATH");
   msg("Found $exe - ok.");
@@ -138,7 +138,9 @@ $bwaopt .= ' -p' if $interleaved;
 
 my $tsvopt = $noindels ? '--noindels' : '';
 
-my $fbopt = "-p 1 -q 20 -m $mapqual -F $minfrac -C $mincov -V";
+#my $fbopt = "-p 1 -q 20 -m $mapqual -F $minfrac -C $mincov -V";
+my $fbopt = "-p 1 -q 20 -m $mapqual";
+my $mincov2 = $mincov-1;
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # prepare the commands
@@ -155,7 +157,7 @@ my @cmd = (
   "fasta_generate_regions.py ref.fa.fai $refchunksize > regions.txt",
   "freebayes-parallel regions.txt $threads $fbopt -f ref.fa aln.bam > raw.vcf",
   "rm -f regions.txt",
-  "cat raw.vcf > snps.vcf",
+  "vcffilter -f 'DP > $mincov2' -f 'QUAL > 10' raw.vcf > snps.vcf",
   "bgzip -c snps.vcf > snps.vcf.gz",
   "tabix -p vcf snps.vcf.gz",
   "$BINDIR/snippy-vcf_tsv --auto > snps.csv",
