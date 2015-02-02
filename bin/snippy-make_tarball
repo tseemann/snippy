@@ -21,7 +21,7 @@ mkdir "$FOLDER"
 #links -dump ../doc/snippy-manual.html > ../doc/snippy-manual.txt
 
 echo "Copying files to: $FOLDER"
-cp -rv ../bin ../doc ../test ../binaries "$FOLDER"
+cp -rv ../bin ../doc ../binaries "$FOLDER"
 
 echo "Removing unwanted backup files in: $FOLDER"
 find "$FOLDER" -name "*~" -o -name DEADJOE -exec rm -f {} \;
