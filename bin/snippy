@@ -49,7 +49,7 @@ $ENV{PATH} = "$BINDIR:"
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # check for needed exes
 
-for my $exe (qw(cp rm awk renice bwa samtools tabix bgzip
+for my $exe (qw(bwa samtools tabix bgzip
                 parallel freebayes freebayes-parallel fasta_generate_regions.py 
                 vcffilter vcfstreamsort vcfuniq vcffirstheader vcf-consensus
                 snippy-vcf_tsv snippy-vcf_report)) {
