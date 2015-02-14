@@ -160,7 +160,7 @@ my @cmd = (
   "vcffilter -f 'DP > $mincov2' -f 'QUAL > 10' $prefix.raw.vcf > $prefix.vcf",
   "bgzip -c $prefix.vcf > $prefix.vcf.gz",
   "tabix -p vcf $prefix.vcf.gz",
-  "$BINDIR/snippy-vcf_tsv --bam $prefix.bam --gff ref.gff --ref ref.fa --vcf $prefix.vcf > $prefix.csv",
+  "$BINDIR/snippy-vcf_tsv --bam $prefix.bam --gff ref.gff --ref ref.fa --vcf $prefix.vcf > $prefix.tab",
   "vcf-consensus $prefix.vcf.gz < ref.fa > $prefix.consensus.fa",
 );
 
@@ -190,8 +190,8 @@ print GFF "##gff-version 3\n";
 
 msg("Creating BED and GFF files.");
 my $num_snps=0;
-open CSV, '<', "$prefix.csv";
-while (<CSV>) {
+open TAB, '<', "$prefix.tab";
+while (<TAB>) {
   chomp;
   my($chr,$pos,$type,$ref,$alt,$evid) = split m/\t/;
   next if $pos !~ m/^\d+$/;  # header line or other gumpf
@@ -200,6 +200,7 @@ while (<CSV>) {
                        '.', '.', 0, "note=$type $ref=>$alt $evid"),"\n";
   $num_snps++;
 }
+close TAB;
 msg("Identified $num_snps variants.");
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
