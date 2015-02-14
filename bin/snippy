@@ -43,7 +43,7 @@ msg("Detected operating system: $OPSYS");
 msg("Enabling bundled $OPSYS tools.");
 $ENV{PATH} = "$BINDIR:"
              .$ENV{PATH}
-             .":$BINDIR:$BINDIR/../binaries/$OPSYS"
+             .":$BINDIR/../binaries/$OPSYS"
              .":$BINDIR/../binaries/noarch";
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
