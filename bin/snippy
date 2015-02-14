@@ -25,7 +25,7 @@ my $t0 = localtime;
 # command line options
 
 my(@Options, $quiet, $force, $outdir, $prefix, $reference, $threads, $report,
-             $mapqual, $mincov, $minfrac, $rgid,
+             $mapqual, $mincov, $minfrac, $rgid, $bwaopt,
              $interleaved, $noindels, $cleanup);
 setOptions();
 
@@ -59,6 +59,8 @@ for my $exe (qw(cp rm awk renice bwa samtools tabix bgzip
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # type check parameters
+
+$prefix =~ m{/} and err("File --prefix can not have slash '/' in it.");
 
 $reference or err("Please supply a reference FASTA file with --reference");
 -r $reference or err("Invalid --reference filename");
@@ -131,7 +133,7 @@ msg("Wrote $nfeat features to ref.gff");
 $rgid ||= $prefix;
 msg("Using BAM RG (Read Group) ID: $rgid");
 
-my $bwaopt = qq{-M -R '\@RG\tID:$rgid\tSM:$rgid'};
+$bwaopt .= qq{ -v 2 -M -R '\@RG\tID:$rgid\tSM:$rgid'};
 $bwaopt .= ' -p' if $interleaved;
 
 my $tsvopt = $noindels ? '--noindels' : '';
@@ -303,6 +305,7 @@ sub setOptions {
     {OPT=>"minfrac=f",  VAR=>\$minfrac, DEFAULT=>0.9,  DESC=>"Minumum proportion for variant evidence"},
     {OPT=>"cleanup!",  VAR=>\$cleanup, DEFAULT=>0,  DESC=>"Remove all non-SNP files: BAMs, indices etc"},
     {OPT=>"rgid=s",  VAR=>\$rgid, DEFAULT=>'',  DESC=>"Use this \@RG ID: in the BAM header"},
+    {OPT=>"bwaopt=s",  VAR=>\$bwaopt, DEFAULT=>'',  DESC=>"Extra BWA MEM options, eg. -x pacbio"},
     {OPT=>"report!",  VAR=>\$report, DEFAULT=>0,  DESC=>"Produce long report with visual alignment (slow)"},
   );
 
