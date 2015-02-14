@@ -24,7 +24,7 @@ my $t0 = localtime;
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # command line options
 
-my(@Options, $quiet, $force, $outdir, $prefix, $reference, $threads, $report,
+my(@Options, $quiet, $force, $outdir, $prefix, $reference, $cpus, $report,
              $mapqual, $mincov, $minfrac, $rgid, $bwaopt,
              $interleaved, $noindels, $cleanup);
 setOptions();
@@ -67,11 +67,11 @@ $reference or err("Please supply a reference FASTA file with --reference");
 $reference = File::Spec->rel2abs($reference);
 msg("Using reference: $reference");
 
-$threads > 0 or err("Invalid --threads $threads");
-msg("Will use $threads threads");
+$cpus > 0 or err("Invalid --cpus $cpus");
+msg("Will use $cpus cpus");
 
 my $refsize = -s $reference; # rough size in bases
-my $refchunksize = int( $refsize / $threads / 2 );
+my $refchunksize = int( $refsize / $cpus / 2 );
 msg("Reference is approximately $refsize bp, will chunk into $refchunksize bp.");
 
 @ARGV = map { File::Spec->rel2abs($_) } @ARGV;
@@ -148,12 +148,12 @@ my $mincov2 = $mincov-1;
 my @cmd = (
   "samtools faidx ref.fa",
   "bwa index ref.fa",
-  "(bwa mem $bwaopt -t $threads ref.fa @reads"
-    ." | samtools view -@ $threads -q $mapqual -F 3844 -S -b -u -T ref.fa -"
-    ." | samtools sort -@ $threads - $prefix)",
+  "(bwa mem $bwaopt -t $cpus ref.fa @reads"
+    ." | samtools view -@ $cpus -q $mapqual -F 3844 -S -b -u -T ref.fa -"
+    ." | samtools sort -@ $cpus - $prefix)",
   "samtools index $prefix.bam",
   "fasta_generate_regions.py ref.fa.fai $refchunksize > regions.txt",
-  "freebayes-parallel regions.txt $threads $fbopt -f ref.fa $prefix.bam > $prefix.raw.vcf",
+  "freebayes-parallel regions.txt $cpus $fbopt -f ref.fa $prefix.bam > $prefix.raw.vcf",
   "vcffilter -f 'DP > $mincov2' -f 'QUAL > 10' $prefix.raw.vcf > $prefix.vcf",
   "bgzip -c $prefix.vcf > $prefix.vcf.gz",
   "tabix -p vcf $prefix.vcf.gz",
@@ -290,7 +290,7 @@ sub setOptions {
     {OPT=>"version", VAR=>\&version,           DESC=>"Print version and exit"},
     {OPT=>"citation",VAR=>\&show_citation,     DESC=>"Print citation for referencing $EXE"},
     {OPT=>"quiet!",  VAR=>\$quiet, DEFAULT=>0, DESC=>"No screen output"},
-    {OPT=>"threads=i",  VAR=>\$threads, DEFAULT=>8,  DESC=>"Number of threads for bwa/samtools"},
+    {OPT=>"cpus=i",  VAR=>\$cpus, DEFAULT=>8,  DESC=>"Maximum number of CPU cores to use"},
     {OPT=>"reference=s",  VAR=>\$reference, DEFAULT=>'',  DESC=>"Reference genome. Supports FASTA, GenBank, EMBL (not GFF)"},
     {OPT=>"outdir=s",  VAR=>\$outdir, DEFAULT=>'',  DESC=>"Output folder"},
     {OPT=>"prefix=s",  VAR=>\$prefix, DEFAULT=>'snps',  DESC=>"Prefix for output files"},
