@@ -207,7 +207,7 @@ my %txt = (
   'DateTime'      => $t0->datetime,
 );
 
-msg("Creating extra output files: BED GFF CSV");
+msg("Creating extra output files: BED GFF CSV TXT");
 my $num_var=0;
 open TAB, '<', "$prefix.tab";
 while (<TAB>) {
@@ -265,6 +265,16 @@ if ($cleanup) {
   remove_tree($refdir);
 }
 
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# report results
+
+msg("Result folder: $outdir");
+msg("Result files:");
+for my $fname (<$prefix.*>) {
+  msg("* $fname");
+}
+
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # calculate time spent
 
@@ -273,14 +283,21 @@ my $secs = $t1 - $t0; # returns a Time::Seconds
 msg("Walltime used:", $secs->pretty);
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
-# report results
+# inspiring final message
 
-my($outfiles) = qx(echo $prefix.*);
-chomp $outfiles;
-msg("Result folder: $outdir");
-msg("Result files: $outfiles");
+my @motd = (
+  "May the SNPs be with you.",
+  "Wishing you a life free of homopolymer errors.",
+  "Found a bug? Post it at $URL/issues",
+  "Have a suggestion? Tell me at $URL/issues",
+  "The Snippy manual is at $URL/blob/master/README.md",
+  "Questionable SNP? Try the --report option to see the alignments.",
+  "Did you know? Snippy is a combination of SNP, Skippy, and snappy.",
+);
+srand( $$ + $secs + $num_var + $refsize ); # seed
+msg( $motd[ int(rand(scalar(@motd))) ] );
 
-msg("May the SNPs be with you.");
+msg("Done.");
 
 #----------------------------------------------------------------------
 
