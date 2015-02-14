@@ -5,7 +5,7 @@ use FindBin;
 use Time::Piece;
 use Time::Seconds;
 use File::Path qw(make_path remove_tree);
-use File::Spec qw();
+use File::Spec;
 use Bio::SeqIO;
 use Bio::Tools::GFF;
 
@@ -146,17 +146,14 @@ my $mincov2 = $mincov-1;
 # prepare the commands
 
 my @cmd = (
-##  "renice -n 10 $$ >> $ERRORLOG",
   "samtools faidx ref.fa",
   "bwa index ref.fa",
   "(bwa mem $bwaopt -t $threads ref.fa @reads"
     ." | samtools view -@ $threads -q $mapqual -F 3844 -S -b -u -T ref.fa -"
     ." | samtools sort -@ $threads - $prefix)",
   "samtools index $prefix.bam",
-##  "samtools depth $prefix.bam | awk 'BEGIN { OFMT=\"%d\" } { s+=\$3 ; n++ } END { print s/n }' > depth.txt",
   "fasta_generate_regions.py ref.fa.fai $refchunksize > regions.txt",
   "freebayes-parallel regions.txt $threads $fbopt -f ref.fa $prefix.bam > $prefix.raw.vcf",
-##  "rm -f regions.txt",
   "vcffilter -f 'DP > $mincov2' -f 'QUAL > 10' $prefix.raw.vcf > $prefix.vcf",
   "bgzip -c $prefix.vcf > $prefix.vcf.gz",
   "tabix -p vcf $prefix.vcf.gz",
