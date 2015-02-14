@@ -1,9 +1,7 @@
 #!/usr/bin/env perl
 use warnings;
 use strict;
-use File::Temp;
 use Data::Dumper;
-use IO::Handle;
 use Bio::Tools::GFF;
 use Fatal;
 
