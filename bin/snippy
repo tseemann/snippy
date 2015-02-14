@@ -15,7 +15,7 @@ use Bio::Tools::GFF;
 my $EXE = $FindBin::RealScript;
 my $BINDIR = $FindBin::Bin;
 my $VERSION = "1.6-alpha";
-my $SYNOPSIS = "Fast bacterial variant calling from NGS reads";
+my $SYNOPSIS = "fast bacterial variant calling from NGS reads";
 my $AUTHOR = 'Torsten Seemann <torsten.seemann@gmail.com>';
 my $URL = 'https://github.com/Victorian-Bioinformatics-Consortium/snippy';
 my $OPSYS = $^O;
@@ -270,9 +270,9 @@ sub show_citation {
   
 If you use $EXE in your work, please cite:
 
-    Seemann T (2013)
+    Seemann T (2015)
     $EXE: $SYNOPSIS
-    http://vicbioinformatics.com/
+    $URL
     
 Thank you.
 
