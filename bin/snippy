@@ -189,7 +189,7 @@ open GFF, '>', "$prefix.gff";
 print GFF "##gff-version 3\n";
 
 msg("Creating BED and GFF files.");
-my $num_snps=0;
+my $num_var=0;
 open TAB, '<', "$prefix.tab";
 while (<TAB>) {
   chomp;
@@ -198,10 +198,10 @@ while (<TAB>) {
   print BED join("\t", $chr, $pos-1, $pos),"\n";
   print GFF join("\t", $chr, "$EXE:$VERSION", 'variation', $pos, $pos, 
                        '.', '.', 0, "note=$type $ref=>$alt $evid"),"\n";
-  $num_snps++;
+  $num_var++;
 }
 close TAB;
-msg("Identified $num_snps variants.");
+msg("Identified $num_var variants.");
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # optionally generate a long visual report
