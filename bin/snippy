@@ -70,10 +70,6 @@ msg("Using reference: $reference");
 $cpus > 0 or err("Invalid --cpus $cpus");
 msg("Will use $cpus cpus");
 
-my $refsize = -s $reference; # rough size in bases
-my $refchunksize = int( $refsize / $cpus / 2 );
-msg("Reference is approximately $refsize bp, will chunk into $refchunksize bp.");
-
 @ARGV = map { File::Spec->rel2abs($_) } @ARGV;
 my @reads = shift @ARGV;
 push @reads, shift(@ARGV) if @ARGV;
@@ -128,6 +124,14 @@ msg("Wrote $nseq sequences to ref.fa");
 msg("Wrote $nfeat features to ref.gff");
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# divide the reference into chunks to parallel freebayes processing
+
+my $refsize = -s 'ref.fa';  # rough size in bases
+my $num_chunks = $cpus * 4; # oversample by 4 for run-time variation
+my $chunk_size = int( $refsize / $num_chunks ); # bases per chunk
+msg("Freebayes will process $num_chunks chunks of $chunk_size bp, $cpus chunks at a time.");
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # prepare the command options
 
 $rgid ||= $prefix;
@@ -151,8 +155,8 @@ my @cmd = (
     ." | samtools view -@ $cpus -q $mapqual -F 3844 -S -b -u -T ref.fa -"
     ." | samtools sort -@ $cpus - $prefix)",
   "samtools index $prefix.bam",
-  "fasta_generate_regions.py ref.fa.fai $refchunksize > regions.txt",
-  "freebayes-parallel regions.txt $cpus $fbopt -f ref.fa $prefix.bam > $prefix.raw.vcf",
+  "fasta_generate_regions.py ref.fa.fai $chunk_size > ref.txt",
+  "freebayes-parallel ref.txt $cpus $fbopt -f ref.fa $prefix.bam > $prefix.raw.vcf",
   "vcffilter -f 'DP > $mincov2' -f 'QUAL > 10' $prefix.raw.vcf > $prefix.vcf",
   "bgzip -c $prefix.vcf > $prefix.vcf.gz",
   "tabix -p vcf $prefix.vcf.gz",
