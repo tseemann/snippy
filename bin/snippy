@@ -190,6 +190,9 @@ print GFF "##gff-version 3\n";
 
 open CSV, '>', "$prefix.csv";
 
+open HTML, '>', "$prefix.html";
+print HTML "<TABLE ID='$prefix'>\n";
+
 my %txt = (
   'Reference'     => $reference,
   'ReferenceSize' => $refsize,
@@ -205,8 +208,11 @@ while (<TAB>) {
   chomp;
   my @col = split m/\t/;
   my($chr,$pos,$type,$ref,$alt,$evid) = @col;
+  my $header = $pos !~ m/^\d+$/;
   print CSV join(',', map { m/,/ ? qq{"$_"} : $_ } @col),"\n";
-  next if $pos !~ m/^\d+$/;  # header line or other gumpf
+  my $TD = $header ? "TH" : "TD";
+  print HTML "<TR>\n", map { "<$TD>$_\n" } @col;
+  next if $header;
   print BED join("\t", $chr, $pos-1, $pos),"\n";
   print GFF join("\t", $chr, "$EXE:$VERSION", 'variation', $pos, $pos, 
                        '.', '.', 0, "note=$type $ref=>$alt $evid"),"\n";
@@ -217,6 +223,11 @@ close TAB;
 close BED;
 close GFF;
 close CSV;
+
+#print HTML "<CAPTION>Found $num_var variants in $reference</CAPTION>\n";
+print HTML "</TABLE>\n";
+close HTML;
+
 msg("Identified $num_var variants.");
 $txt{'VariantTotal'} = $num_var;
 
