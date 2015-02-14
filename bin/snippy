@@ -26,7 +26,7 @@ my $t0 = localtime;
 
 my(@Options, $quiet, $force, $outdir, $prefix, $reference, $threads, $report,
              $mapqual, $mincov, $minfrac, $rgid,
-             $interleaved, $correcting, $noindels, $cleanup);
+             $interleaved, $noindels, $cleanup);
 setOptions();
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -132,7 +132,6 @@ $rgid ||= $prefix;
 msg("Using BAM RG (Read Group) ID: $rgid");
 
 my $bwaopt = qq{-M -R '\@RG\tID:$rgid\tSM:$rgid'};
-$bwaopt .= '-k 19 -B 8 -L 20 -T 30 -U 50 -c 100' if $correcting;
 $bwaopt .= ' -p' if $interleaved;
 
 my $tsvopt = $noindels ? '--noindels' : '';
@@ -298,7 +297,6 @@ sub setOptions {
     {OPT=>"prefix=s",  VAR=>\$prefix, DEFAULT=>'snps',  DESC=>"Prefix for output files"},
     {OPT=>"force!",  VAR=>\$force, DEFAULT=>0,  DESC=>"Force overwrite of existing output folder"},
     {OPT=>"interleaved!",  VAR=>\$interleaved, DEFAULT=>0,  DESC=>"Single input file is interleaved pairs, not singles"},
-#    {OPT=>"correcting!",  VAR=>\$correcting, DEFAULT=>0,  DESC=>"Enable if correcting a genome assembled from same reads (EXPERIMENTAL)"},
     {OPT=>"noindels!",  VAR=>\$noindels, DEFAULT=>0,  DESC=>"Only look for substitutions, not indels"},
     {OPT=>"mapqual=f",  VAR=>\$mapqual, DEFAULT=>60,  DESC=>"Minimum mapping quality to allow"},
     {OPT=>"mincov=i",  VAR=>\$mincov, DEFAULT=>10,  DESC=>"Minimum coverage of variant site"},
