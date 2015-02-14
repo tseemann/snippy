@@ -15,9 +15,9 @@ use Bio::Tools::GFF;
 my $EXE = $FindBin::RealScript;
 my $BINDIR = $FindBin::Bin;
 my $VERSION = "1.6-alpha";
-my $SYNOPSIS = "Fast bacterial SNP/INDEL calling from NGS reads";
-my $AUTHOR = 'Torsten Seemann <torsten.seemann@monash.edu>';
-my $URL = 'http://www.vicbioinformatics.com';
+my $SYNOPSIS = "Fast bacterial variant calling from NGS reads";
+my $AUTHOR = 'Torsten Seemann <torsten.seemann@gmail.com>';
+my $URL = 'https://github.com/Victorian-Bioinformatics-Consortium/snippy';
 my $OPSYS = $^O;
 my $ERRORLOG = "snippy_log.txt";
 my $t0 = localtime;
@@ -139,7 +139,7 @@ $bwaopt .= ' -p' if $interleaved;
 my $tsvopt = $noindels ? '--noindels' : '';
 
 #my $fbopt = "-p 1 -q 20 -m $mapqual -F $minfrac -C $mincov -V";
-my $fbopt = "-p 1 -q 20 -m $mapqual";
+my $fbopt = "-p 1 -q 20";
 my $mincov2 = $mincov-1;
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -156,7 +156,7 @@ my @cmd = (
 ##  "samtools depth aln.bam | awk 'BEGIN { OFMT=\"%d\" } { s+=\$3 ; n++ } END { print s/n }' > depth.txt",
   "fasta_generate_regions.py ref.fa.fai $refchunksize > regions.txt",
   "freebayes-parallel regions.txt $threads $fbopt -f ref.fa aln.bam > raw.vcf",
-  "rm -f regions.txt",
+##  "rm -f regions.txt",
   "vcffilter -f 'DP > $mincov2' -f 'QUAL > 10' raw.vcf > snps.vcf",
   "bgzip -c snps.vcf > snps.vcf.gz",
   "tabix -p vcf snps.vcf.gz",

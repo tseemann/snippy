@@ -68,10 +68,12 @@ while (<VCF>) {
     $aff = join(' ', $f->primary_tag, 
       map { $f->get_tag_values($_) if $f->has_tag($_) } qw(locus_tag gene product) )   
   }
-  my @evid; 
-  push @evid, "$ref:".$tag->{RO} if $tag->{RO};
-  push @evid, "$alt:".$tag->{AO} if $tag->{AO};
-#  push @evid, "DEP: ".$tag->{DP};
+  my @evid;
+  # freebayes VCF seems to use different tags when TYPE=indel ...
+  my $RO = $tag->{RO} || '0';
+  my $AO = $tag->{AO} || '0';  
+  push @evid, "$ref:$RO", "$alt:$AO";
+  push @evid, "N=".$tag->{DP} if $debug;
   my $evid = join(' ', @evid);
 
   print join("\t", $chr, $pos, $tag->{TYPE}, $ref, $alt, $evid, $aff),"\n";
