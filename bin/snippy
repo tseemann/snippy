@@ -19,13 +19,12 @@ my $SYNOPSIS = "Fast bacterial variant calling from NGS reads";
 my $AUTHOR = 'Torsten Seemann <torsten.seemann@gmail.com>';
 my $URL = 'https://github.com/Victorian-Bioinformatics-Consortium/snippy';
 my $OPSYS = $^O;
-my $ERRORLOG = "snippy_log.txt";
 my $t0 = localtime;
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # command line options
 
-my(@Options, $quiet, $force, $outdir, $reference, $threads, $report,
+my(@Options, $quiet, $force, $outdir, $prefix, $reference, $threads, $report,
              $mapqual, $mincov, $minfrac, $rgid,
              $interleaved, $correcting, $noindels, $cleanup);
 setOptions();
@@ -157,38 +156,40 @@ my @cmd = (
   "fasta_generate_regions.py ref.fa.fai $refchunksize > regions.txt",
   "freebayes-parallel regions.txt $threads $fbopt -f ref.fa aln.bam > raw.vcf",
 ##  "rm -f regions.txt",
-  "vcffilter -f 'DP > $mincov2' -f 'QUAL > 10' raw.vcf > snps.vcf",
-  "bgzip -c snps.vcf > snps.vcf.gz",
-  "tabix -p vcf snps.vcf.gz",
-  "$BINDIR/snippy-vcf_tsv --auto > snps.csv",
-  "vcf-consensus snps.vcf.gz < ref.fa > consensus.fa",
+  "vcffilter -f 'DP > $mincov2' -f 'QUAL > 10' raw.vcf > $prefix.vcf",
+  "bgzip -c $prefix.vcf > $prefix.vcf.gz",
+  "tabix -p vcf $prefix.vcf.gz",
+  "$BINDIR/snippy-vcf_tsv --bam aln.bam --gff ref.gff --ref ref.fa --vcf $prefix.vcf > $prefix.csv",
+  "vcf-consensus $prefix.vcf.gz < ref.fa > consensus.fa",
 );
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # run the commands
 
+my $log_file = "$prefix.log";
+
 for my $cmd (@cmd) {
   # put section in logfile
-  open my $logfh, '>>', $ERRORLOG;
+  open my $logfh, '>>', $log_file;
   print $logfh "\n### ", $cmd, "\n\n";
   close $logfh;
   # run it
-  $cmd .= " 2>> $ERRORLOG";
+  $cmd .= " 2>> $log_file";
   msg("Running: $cmd");
-  system($cmd)==0 or err("Error running command, check $outdir/$ERRORLOG");
+  system($cmd)==0 or err("Error running command, check $outdir/$log_file");
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # produce .bed and .gff files from the .csv
 
-open BED, '>', "snps.bed";
+open BED, '>', "$prefix.bed";
 
-open GFF, '>', "snps.gff";
+open GFF, '>', "$prefix.gff";
 print GFF "##gff-version 3\n";
 
 msg("Creating BED and GFF files.");
 my $num_snps=0;
-open CSV, '<', "snps.csv";
+open CSV, '<', "$prefix.csv";
 while (<CSV>) {
   chomp;
   my($chr,$pos,$type,$ref,$alt,$evid) = split m/\t/;
@@ -205,7 +206,7 @@ msg("Identified $num_snps variants.");
 
 if ($report) {
   msg("Generating report, please be patient...");
-  system("$BINDIR/snippy-vcf_report --bam aln.bam --ref ref.fa --vcf snps.vcf > snps.txt 2>> $ERRORLOG");
+  system("$BINDIR/snippy-vcf_report --bam aln.bam --ref ref.fa --vcf $prefix.vcf > $prefix.txt 2>> $log_file");
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -230,7 +231,7 @@ msg("Walltime used:", $secs->pretty);
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # report results
 
-my($outfiles) = qx(echo snps.*);
+my($outfiles) = qx(echo $prefix.*);
 chomp $outfiles;
 msg("Result folder: $outdir");
 msg("Result files: $outfiles");
@@ -294,6 +295,7 @@ sub setOptions {
     {OPT=>"threads=i",  VAR=>\$threads, DEFAULT=>8,  DESC=>"Number of threads for bwa/samtools"},
     {OPT=>"reference=s",  VAR=>\$reference, DEFAULT=>'',  DESC=>"Reference genome. Supports FASTA, GenBank, EMBL (not GFF)"},
     {OPT=>"outdir=s",  VAR=>\$outdir, DEFAULT=>'',  DESC=>"Output folder"},
+    {OPT=>"prefix=s",  VAR=>\$prefix, DEFAULT=>'snps',  DESC=>"Prefix for output files"},
     {OPT=>"force!",  VAR=>\$force, DEFAULT=>0,  DESC=>"Force overwrite of existing output folder"},
     {OPT=>"interleaved!",  VAR=>\$interleaved, DEFAULT=>0,  DESC=>"Single input file is interleaved pairs, not singles"},
 #    {OPT=>"correcting!",  VAR=>\$correcting, DEFAULT=>0,  DESC=>"Enable if correcting a genome assembled from same reads (EXPERIMENTAL)"},
