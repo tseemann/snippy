@@ -188,12 +188,16 @@ open BED, '>', "$prefix.bed";
 open GFF, '>', "$prefix.gff";
 print GFF "##gff-version 3\n";
 
-msg("Creating BED and GFF files.");
+open CSV, '>', "$prefix.csv";
+
+msg("Creating extra output files: BED GFF CSV");
 my $num_var=0;
 open TAB, '<', "$prefix.tab";
 while (<TAB>) {
   chomp;
-  my($chr,$pos,$type,$ref,$alt,$evid) = split m/\t/;
+  my @col = split m/\t/;
+  my($chr,$pos,$type,$ref,$alt,$evid) = @col;
+  print CSV join(',', map { m/,/ ? qq{"$_"} : $_ } @col),"\n";
   next if $pos !~ m/^\d+$/;  # header line or other gumpf
   print BED join("\t", $chr, $pos-1, $pos),"\n";
   print GFF join("\t", $chr, "$EXE:$VERSION", 'variation', $pos, $pos, 
@@ -201,6 +205,9 @@ while (<TAB>) {
   $num_var++;
 }
 close TAB;
+close BED;
+close GFF;
+close CSV;
 msg("Identified $num_var variants.");
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
