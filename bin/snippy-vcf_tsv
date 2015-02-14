@@ -3,6 +3,7 @@ use warnings;
 use strict;
 use Data::Dumper;
 use Bio::Tools::GFF;
+use Bio::SeqIO;
 use Fatal;
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
@@ -25,18 +26,29 @@ $bam or die "need --bam <alignments.bam>";
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Create an index of seq:pos => feature
 
+my %seq;
 my %feat;
 my %olap;
 my $nfeat=0;
+my $nseq=0;
+
 if ($gff) {
+  print STDERR "Loading reference: $ref\n";
+  my $fa = Bio::SeqIO->new(-file=>$ref, -format=>'fasta');
+  while (my $seq = $fa->next_seq) {
+    $seq{ $seq->id } = $seq;
+    $nseq++;
+  }
   print STDERR "Loading features: $gff\n";
   my $in = Bio::Tools::GFF->new(-file=>$gff, -gff_version=>3);
   while (my $f = $in->next_feature) {
+    $f->attach_seq( $seq{ $f->seq_id } );
     $feat{++$nfeat} = $f;
     for my $pos ($f->start .. $f->end) {
       $olap{$f->seq_id}->[$pos] = $nfeat;  # FIXME: should be push()
     }
   }
+  print STDERR "Loaded $nseq sequences and $nfeat features.\n";
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
@@ -56,7 +68,7 @@ while (<VCF>) {
   chomp;
 
   # [VCF] CHROM POS ID REF ALT QUAL FILTER INFO [FORMAT DATA DATA2 ...]
-  my($chr,$pos,undef,$ref,$alt,undef,undef,$tags) = split m/\t/;
+  my($chr,$pos,undef,$ref_base,$alt_base,undef,undef,$tags) = split m/\t/;
   my $tag = vcf_tags_to_hash($tags);
 
   my $aff = '';
@@ -70,11 +82,11 @@ while (<VCF>) {
   # freebayes VCF seems to use different tags when TYPE=indel ...
   my $RO = $tag->{RO} || '0';
   my $AO = $tag->{AO} || '0';  
-  push @evid, "$ref:$RO", "$alt:$AO";
+  push @evid, "$ref_base:$RO", "$alt_base:$AO";
   push @evid, "N=".$tag->{DP} if $debug;
   my $evid = join(' ', @evid);
 
-  print join("\t", $chr, $pos, $tag->{TYPE}, $ref, $alt, $evid, $aff),"\n";
+  print join("\t", $chr, $pos, $tag->{TYPE}, $ref_base, $alt_base, $evid, $aff),"\n";
   $count++;  
 }
 print STDERR "Converted $count SNPs to TSV format.\n";
