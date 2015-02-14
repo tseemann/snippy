@@ -104,7 +104,7 @@ chdir($outdir);
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # load the reference, now support all formats Bioperl can load
 
-msg("Extracting FASTA and GFF from reference...");
+msg("Extracting FASTA and GFF from reference. ");
 my $in = Bio::SeqIO->new(-file=>$reference) or err("Could not guess file format: $reference");
 my $out = Bio::SeqIO->new(-file=>">ref.fa", -format=>'fasta');
 my $gff = Bio::Tools::GFF->new(-file=>">ref.gff", -gff_version=>3);
@@ -138,8 +138,7 @@ $bwaopt .= ' -p' if $interleaved;
 
 my $tsvopt = $noindels ? '--noindels' : '';
 
-#my $fbopt = "-p 1 -q 20 -m $mapqual -F $minfrac -C $mincov -V";
-my $fbopt = "-p 1 -q 20";
+my $fbopt = "-p 1 -q 20 -m $mapqual -F $minfrac -C $mincov -V";
 my $mincov2 = $mincov-1;
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
