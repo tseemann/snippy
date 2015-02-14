@@ -128,8 +128,8 @@ msg("Wrote $nfeat features to ref.gff");
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # prepare the command options
 
-$rgid ||= "snippy";
-msg("Using BAM \@RG ID: $rgid");
+$rgid ||= $prefix;
+msg("Using BAM RG (Read Group) ID: $rgid");
 
 my $bwaopt = qq{-M -R '\@RG\tID:$rgid\tSM:$rgid'};
 $bwaopt .= '-k 19 -B 8 -L 20 -T 30 -U 50 -c 100' if $correcting;
@@ -150,17 +150,17 @@ my @cmd = (
   "bwa index ref.fa",
   "(bwa mem $bwaopt -t $threads ref.fa @reads"
     ." | samtools view -@ $threads -q $mapqual -F 3844 -S -b -u -T ref.fa -"
-    ." | samtools sort -@ $threads - aln)",
-  "samtools index aln.bam",
-##  "samtools depth aln.bam | awk 'BEGIN { OFMT=\"%d\" } { s+=\$3 ; n++ } END { print s/n }' > depth.txt",
+    ." | samtools sort -@ $threads - $prefix)",
+  "samtools index $prefix.bam",
+##  "samtools depth $prefix.bam | awk 'BEGIN { OFMT=\"%d\" } { s+=\$3 ; n++ } END { print s/n }' > depth.txt",
   "fasta_generate_regions.py ref.fa.fai $refchunksize > regions.txt",
-  "freebayes-parallel regions.txt $threads $fbopt -f ref.fa aln.bam > raw.vcf",
+  "freebayes-parallel regions.txt $threads $fbopt -f ref.fa $prefix.bam > $prefix.raw.vcf",
 ##  "rm -f regions.txt",
-  "vcffilter -f 'DP > $mincov2' -f 'QUAL > 10' raw.vcf > $prefix.vcf",
+  "vcffilter -f 'DP > $mincov2' -f 'QUAL > 10' $prefix.raw.vcf > $prefix.vcf",
   "bgzip -c $prefix.vcf > $prefix.vcf.gz",
   "tabix -p vcf $prefix.vcf.gz",
-  "$BINDIR/snippy-vcf_tsv --bam aln.bam --gff ref.gff --ref ref.fa --vcf $prefix.vcf > $prefix.csv",
-  "vcf-consensus $prefix.vcf.gz < ref.fa > consensus.fa",
+  "$BINDIR/snippy-vcf_tsv --bam $prefix.bam --gff ref.gff --ref ref.fa --vcf $prefix.vcf > $prefix.csv",
+  "vcf-consensus $prefix.vcf.gz < ref.fa > $prefix.consensus.fa",
 );
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -206,7 +206,7 @@ msg("Identified $num_snps variants.");
 
 if ($report) {
   msg("Generating report, please be patient...");
-  system("$BINDIR/snippy-vcf_report --bam aln.bam --ref ref.fa --vcf $prefix.vcf > $prefix.txt 2>> $log_file");
+  system("$BINDIR/snippy-vcf_report --bam $prefix.bam --ref ref.fa --vcf $prefix.vcf > $prefix.txt 2>> $log_file");
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -214,7 +214,7 @@ if ($report) {
 
 if ($cleanup) {
   my @delme = map { "ref.fa$_" } ('', qw(.fai .amb .ann .bwt .pac .sa));
-  push @delme, ("aln.bam", "aln.bam.bai", 'raw.vcf');
+  push @delme, ("$prefix.bam", "$prefix.bam.bai", "$prefix.raw.vcf");
   for my $file (@delme) {
     msg("Deleting: $file");
     unlink $file;
