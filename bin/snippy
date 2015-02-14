@@ -95,15 +95,21 @@ else {
   msg("Creating folder: $outdir");
   make_path($outdir);
 }
+
+msg("Changing working directory: $outdir");
 chdir($outdir);
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # load the reference, now support all formats Bioperl can load
 
+my $refdir = "reference";
+msg("Creating reference folder: $refdir");
+make_path($refdir);
+
 msg("Extracting FASTA and GFF from reference. ");
 my $in = Bio::SeqIO->new(-file=>$reference) or err("Could not guess file format: $reference");
-my $out = Bio::SeqIO->new(-file=>">ref.fa", -format=>'fasta');
-my $gff = Bio::Tools::GFF->new(-file=>">ref.gff", -gff_version=>3);
+my $out = Bio::SeqIO->new(-file=>">$refdir/ref.fa", -format=>'fasta');
+my $gff = Bio::Tools::GFF->new(-file=>">$refdir/ref.gff", -gff_version=>3);
 my $nseq = 0;
 my $nfeat = 0;
 while (my $seq = $in->next_seq) {
@@ -126,7 +132,7 @@ msg("Wrote $nfeat features to ref.gff");
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # divide the reference into chunks to parallel freebayes processing
 
-my $refsize = -s 'ref.fa';  # rough size in bases
+my $refsize = -s "$refdir/ref.fa";  # rough size in bases
 my $num_chunks = $cpus * 4; # oversample by 4 for run-time variation
 my $chunk_size = int( $refsize / $num_chunks ); # bases per chunk
 msg("Freebayes will process $num_chunks chunks of $chunk_size bp, $cpus chunks at a time.");
@@ -149,19 +155,19 @@ my $mincov2 = $mincov-1;
 # prepare the commands
 
 my @cmd = (
-  "samtools faidx ref.fa",
-  "bwa index ref.fa",
-  "(bwa mem $bwaopt -t $cpus ref.fa @reads"
+  "samtools faidx $refdir/ref.fa",
+  "bwa index $refdir/ref.fa",
+  "(bwa mem $bwaopt -t $cpus $refdir/ref.fa @reads"
     ." | samtools view -@ $cpus -q $mapqual -F 3844 -S -b -u -T ref.fa -"
     ." | samtools sort -@ $cpus - $prefix)",
   "samtools index $prefix.bam",
-  "fasta_generate_regions.py ref.fa.fai $chunk_size > ref.txt",
-  "freebayes-parallel ref.txt $cpus $fbopt -f ref.fa $prefix.bam > $prefix.raw.vcf",
+  "fasta_generate_regions.py $refdir/ref.fa.fai $chunk_size > $refdir/ref.txt",
+  "freebayes-parallel $refdir/ref.txt $cpus $fbopt -f $refdir/ref.fa $prefix.bam > $prefix.raw.vcf",
   "vcffilter -f 'DP > $mincov2' -f 'QUAL > 10' $prefix.raw.vcf > $prefix.vcf",
   "bgzip -c $prefix.vcf > $prefix.vcf.gz",
   "tabix -p vcf $prefix.vcf.gz",
-  "$BINDIR/snippy-vcf_tsv --bam $prefix.bam --gff ref.gff --ref ref.fa --vcf $prefix.vcf > $prefix.tab",
-  "vcf-consensus $prefix.vcf.gz < ref.fa > $prefix.consensus.fa",
+  "$BINDIR/snippy-vcf_tsv --bam $prefix.bam --gff $refdir/ref.gff --ref $refdir/ref.fa --vcf $prefix.vcf > $prefix.tab",
+  "vcf-consensus $prefix.vcf.gz < $refdir/ref.fa > $prefix.consensus.fa",
 );
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -242,19 +248,21 @@ close TXT;
 
 if ($report) {
   msg("Generating report, please be patient...");
-  system("$BINDIR/snippy-vcf_report --bam $prefix.bam --ref ref.fa --vcf $prefix.vcf > $prefix.report.txt 2>> $log_file");
+  system("$BINDIR/snippy-vcf_report --bam $prefix.bam --ref $refdir/ref.fa --vcf $prefix.vcf > $prefix.report.txt 2>> $log_file");
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # clean up
 
 if ($cleanup) {
-  my @delme = map { "ref.fa$_" } ('', qw(.fai .amb .ann .bwt .pac .sa));
+  my @delme = map { "$refdir/ref.fa$_" } ('', qw(.fai .amb .ann .bwt .pac .sa));
   push @delme, ("$prefix.bam", "$prefix.bam.bai", "$prefix.raw.vcf");
   for my $file (@delme) {
     msg("Deleting: $file");
     unlink $file;
   }
+  msg("Removing folder: $refdir");
+  remove_tree($refdir);
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
