@@ -242,7 +242,7 @@ close TXT;
 
 if ($report) {
   msg("Generating report, please be patient...");
-  system("$BINDIR/snippy-vcf_report --bam $prefix.bam --ref ref.fa --vcf $prefix.vcf > $prefix.txt 2>> $log_file");
+  system("$BINDIR/snippy-vcf_report --bam $prefix.bam --ref ref.fa --vcf $prefix.vcf > $prefix.report.txt 2>> $log_file");
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
