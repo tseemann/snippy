@@ -272,7 +272,7 @@ if ($cleanup) {
 msg("Result folder: $outdir");
 msg("Result files:");
 for my $fname (<$prefix.*>) {
-  msg("* $fname");
+  msg("* $outdir/$fname");
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
