@@ -190,6 +190,14 @@ print GFF "##gff-version 3\n";
 
 open CSV, '>', "$prefix.csv";
 
+my %txt = (
+  'Reference'     => $reference,
+  'ReferenceSize' => $refsize,
+  'ReadFiles'     => join(' ', @reads),
+  'Software'      => "$EXE $VERSION",
+  'DateTime'      => $t0->datetime,
+);
+
 msg("Creating extra output files: BED GFF CSV");
 my $num_var=0;
 open TAB, '<', "$prefix.tab";
@@ -202,6 +210,7 @@ while (<TAB>) {
   print BED join("\t", $chr, $pos-1, $pos),"\n";
   print GFF join("\t", $chr, "$EXE:$VERSION", 'variation', $pos, $pos, 
                        '.', '.', 0, "note=$type $ref=>$alt $evid"),"\n";
+  $txt{"Variant-".uc($type)}++;
   $num_var++;
 }
 close TAB;
@@ -209,6 +218,13 @@ close BED;
 close GFF;
 close CSV;
 msg("Identified $num_var variants.");
+$txt{'VariantTotal'} = $num_var;
+
+open TXT, '>', "$prefix.txt";
+for my $key (sort keys %txt) {
+  print TXT join("\t", $key, $txt{$key}),"\n";
+}
+close TXT;
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # optionally generate a long visual report
