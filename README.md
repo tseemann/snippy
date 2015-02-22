@@ -14,12 +14,10 @@ Snippy finds SNPs between a haploid reference genome and your NGS sequence reads
 Walltime used: 3 min, 42 sec
 Results folder: mysnps
 Done.
-```
-```
+
 % ls mysnps
 reference/ snps.vcf snps.bed snps.gff snps.csv aln.bam  ...
-```
-```
+
 % head -5 mysnps/snps.csv
 CHROM  POS      TYPE    REF     ALT     EVIDENCE        FEATURES
 chr      5958   snp     A       G       G:44 A:0        ECO_0001 dnaA replication protein DnaA
@@ -52,7 +50,7 @@ Extension | Description
 .log | A log file with the commands run and their outputs
 .consensus.fa | A version of the reference genome with all variants instantiated
 
-##The TAB file columns
+##Columns in the TAB/CSV/HTML formats
 
 Name | Description
 -----|------------
@@ -77,12 +75,11 @@ PRODUCT | The ```/product``` tag of the feature (if it existed)
 
 ###Etymology
 The name Snippy is a combination of [SNP](http://en.wikipedia.org/wiki/Single-nucleotide_polymorphism) (pronounced "snip") , [snappy](http://www.thefreedictionary.com/snappy) (meaning "quick") and [Skippy the Bush Kangaroo](http://en.wikipedia.org/wiki/Skippy_the_Bush_Kangaroo) (to represent its Australian origin)
-###License
 
+###License
 Snippy is free software, released under the GPL (version 3).
 
 ###Requirements
-
 * Perl >= 5.6
 * BioPerl >= 1.6
 * bwa mem >= 0.7.12 
