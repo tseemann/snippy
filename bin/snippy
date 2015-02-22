@@ -14,7 +14,7 @@ use Bio::Tools::GFF;
 
 my $EXE = $FindBin::RealScript;
 my $BINDIR = $FindBin::Bin;
-my $VERSION = "1.6-alpha";
+my $VERSION = "2.0-alpha";
 my $SYNOPSIS = "fast bacterial variant calling from NGS reads";
 my $AUTHOR = 'Torsten Seemann <torsten.seemann@gmail.com>';
 my $URL = 'https://github.com/Victorian-Bioinformatics-Consortium/snippy';
@@ -24,9 +24,11 @@ my $t0 = localtime;
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # command line options
 
-my(@Options, $quiet, $force, $outdir, $prefix, $reference, $cpus, $report,
-             $mapqual, $mincov, $minfrac, $rgid, $bwaopt,
-             $interleaved, $noindels, $cleanup);
+my(@Options, $quiet, $force, $outdir, $prefix, 
+             $reference, $cpus, 
+             $pe1, $pe2, $se, $peil,
+             $report, $mapqual, $mincov, $minfrac, $rgid, $bwaopt,
+             $cleanup);
 setOptions();
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -52,7 +54,7 @@ $ENV{PATH} = "$BINDIR:"
 for my $exe (qw(bwa samtools tabix bgzip
                 parallel freebayes freebayes-parallel fasta_generate_regions.py 
                 vcffilter vcfstreamsort vcfuniq vcffirstheader vcf-consensus
-                snippy-vcf_tsv snippy-vcf_report)) {
+                snippy-vcf_to_tab snippy-vcf_report)) {
   system("which $exe > /dev/null")==0 or err("Can not find '$exe' in PATH");
   msg("Found $exe - ok.");
 }
@@ -68,15 +70,21 @@ $reference = File::Spec->rel2abs($reference);
 msg("Using reference: $reference");
 
 $cpus > 0 or err("Invalid --cpus $cpus");
-msg("Will use $cpus cpus");
+msg("Will use $cpus CPU cores.");
 
-@ARGV = map { File::Spec->rel2abs($_) } @ARGV;
-my @reads = shift @ARGV;
-push @reads, shift(@ARGV) if @ARGV;
-msg("Using reads: @reads");
-for my $readfn (@reads) {
-  -r $readfn or err("Can't read sequence file: $readfn");
+($pe1 or $pe2 or $se or $peil) 
+  or err("No read files specified. Use --pe1/--pe2 or --se or --peil");
+
+($pe1 && $pe2) xor $se xor $peil 
+  or err("Can not mix read file types. Either (1) --pe1 and --pe2 (2) --se (3) --peil");
+
+my @reads;
+for my $readfn ($pe1, $pe2, $se, $peil) {
+  next unless $readfn;
+  -r $readfn or err("Can not read sequence file: $readfn");
+  push @reads, File::Spec->rel2abs($readfn);
 }
+msg("Using read file: $_") for @reads;
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # prepare output folder
@@ -144,9 +152,7 @@ $rgid ||= $prefix;
 msg("Using BAM RG (Read Group) ID: $rgid");
 
 $bwaopt .= qq{ -v 2 -M -R '\@RG\tID:$rgid\tSM:$rgid'};
-$bwaopt .= ' -p' if $interleaved;
-
-my $tsvopt = $noindels ? '--noindels' : '';
+$bwaopt .= ' -p' if $peil;
 
 my $fbopt = "-p 1 -q 20 -m $mapqual -F $minfrac -C $mincov -V";
 my $mincov2 = $mincov-1;
@@ -166,7 +172,7 @@ my @cmd = (
   "vcffilter -f 'DP > $mincov2' -f 'QUAL > 10' $prefix.raw.vcf > $prefix.vcf",
   "bgzip -c $prefix.vcf > $prefix.vcf.gz",
   "tabix -p vcf $prefix.vcf.gz",
-  "$BINDIR/snippy-vcf_tsv --bam $prefix.bam --gff $refdir/ref.gff --ref $refdir/ref.fa --vcf $prefix.vcf > $prefix.tab",
+  "$BINDIR/snippy-vcf_to_tab --gff $refdir/ref.gff --ref $refdir/ref.fa --vcf $prefix.vcf > $prefix.tab",
   "vcf-consensus $prefix.vcf.gz < $refdir/ref.fa > $prefix.consensus.fa",
 );
 
@@ -207,13 +213,13 @@ my %txt = (
   'DateTime'      => $t0->datetime,
 );
 
-msg("Creating extra output files: BED GFF CSV TXT");
+msg("Creating extra output files: BED GFF CSV TXT HTML");
 my $num_var=0;
 open TAB, '<', "$prefix.tab";
 while (<TAB>) {
   chomp;
   my @col = split m/\t/;
-  my($chr,$pos,$type,$ref,$alt,$evid) = @col;
+  my($chr,$pos,$type,$ref,$alt,@evid) = @col;
   my $header = $pos !~ m/^\d+$/;
   print CSV join(',', map { m/,/ ? qq{"$_"} : $_ } @col),"\n";
   my $TD = $header ? "TH" : "TD";
@@ -221,7 +227,7 @@ while (<TAB>) {
   next if $header;
   print BED join("\t", $chr, $pos-1, $pos),"\n";
   print GFF join("\t", $chr, "$EXE:$VERSION", 'variation', $pos, $pos, 
-                       '.', '.', 0, "note=$type $ref=>$alt $evid"),"\n";
+                       '.', '.', 0, "note=$type $ref=>$alt @evid"),"\n";
   $txt{"Variant-".uc($type)}++;
   $num_var++;
 }
@@ -264,7 +270,6 @@ if ($cleanup) {
   msg("Removing folder: $refdir");
   remove_tree($refdir);
 }
-
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # report results
@@ -358,15 +363,17 @@ sub setOptions {
     {OPT=>"outdir=s",  VAR=>\$outdir, DEFAULT=>'',  DESC=>"Output folder"},
     {OPT=>"prefix=s",  VAR=>\$prefix, DEFAULT=>'snps',  DESC=>"Prefix for output files"},
     {OPT=>"force!",  VAR=>\$force, DEFAULT=>0,  DESC=>"Force overwrite of existing output folder"},
-    {OPT=>"interleaved!",  VAR=>\$interleaved, DEFAULT=>0,  DESC=>"Single input file is interleaved pairs, not singles"},
-    {OPT=>"noindels!",  VAR=>\$noindels, DEFAULT=>0,  DESC=>"Only look for substitutions, not indels"},
+    {OPT=>"pe1|R1|left=s",  VAR=>\$pe1, DEFAULT=>'', DESC=>"Reads, paired-end R1 (left)"},
+    {OPT=>"pe2|R2|right=s",  VAR=>\$pe2, DEFAULT=>'', DESC=>"Reads, paired-end R2 (right)"},
+    {OPT=>"se|single=s",  VAR=>\$se, DEFAULT=>'', DESC=>"Single-end reads"},
+    {OPT=>"peil=s",  VAR=>\$peil, DEFAULT=>'', DESC=>"Reads, paired-end R1/R2 interleaved"},
     {OPT=>"mapqual=f",  VAR=>\$mapqual, DEFAULT=>60,  DESC=>"Minimum mapping quality to allow"},
     {OPT=>"mincov=i",  VAR=>\$mincov, DEFAULT=>10,  DESC=>"Minimum coverage of variant site"},
     {OPT=>"minfrac=f",  VAR=>\$minfrac, DEFAULT=>0.9,  DESC=>"Minumum proportion for variant evidence"},
+    {OPT=>"report!",  VAR=>\$report, DEFAULT=>0,  DESC=>"Produce long report with visual alignment (slow)"},
     {OPT=>"cleanup!",  VAR=>\$cleanup, DEFAULT=>0,  DESC=>"Remove all non-SNP files: BAMs, indices etc"},
     {OPT=>"rgid=s",  VAR=>\$rgid, DEFAULT=>'',  DESC=>"Use this \@RG ID: in the BAM header"},
     {OPT=>"bwaopt=s",  VAR=>\$bwaopt, DEFAULT=>'',  DESC=>"Extra BWA MEM options, eg. -x pacbio"},
-    {OPT=>"report!",  VAR=>\$report, DEFAULT=>0,  DESC=>"Produce long report with visual alignment (slow)"},
   );
 
   (!@ARGV) && (usage());
@@ -387,9 +394,9 @@ sub usage {
   print STDERR "Synopsis:\n  $EXE $VERSION - $SYNOPSIS\n",
                "Author:\n  $AUTHOR\n",
                "Usage:\n",  
-               "  $EXE [options] --ref <ref> <R1.fq.gz> <R2.fq.gz>\n",
-               "  $EXE [options] --ref <ref> --interleaved <shuffledPairs.fq>\n",
-               "  $EXE [options] --ref <ref> <SE.fasta>\n",
+               "  $EXE [options] --outdir <dir> --ref <ref> --pe1 <R1.fq.gz> --pe2 <R2.fq.gz>\n",
+               "  $EXE [options] --outdir <dir> --ref <ref> --se <454.fastq>\n",
+               "  $EXE [options] --outdir <dir> --ref <ref> --peil <velvet.fa.gz>\n",
                "";
 
   foreach (@Options) {

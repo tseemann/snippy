@@ -9,58 +9,53 @@ use Fatal;
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Command line checking
 
-my(@Options, $debug, $auto, $vcf, $ref, $bam, $gff);
+my(@Options, $debug, $auto, $vcf, $ref, $gff);
 setOptions();
 
 if ($auto) {
   $vcf ||= 'snps.vcf';
-  $ref ||= 'ref.fa';
-  $bam ||= 'aln.bam';
-  $gff ||= 'ref.gff';
+  $ref ||= 'reference/ref.fa';
+  $gff ||= 'reference/ref.gff';
 }
 
 $vcf or die "need --vcf <snps.vcf>";
-$ref or die "need --ref <reference.fa>";
-$bam or die "need --bam <alignments.bam>";
+$ref or die "need --ref <ref.fa>";
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Create an index of seq:pos => feature
 
 my %seq;
+print STDERR "Loading reference: $ref\n";
+my $fa = Bio::SeqIO->new(-file=>$ref, -format=>'fasta');
+while (my $seq = $fa->next_seq) {
+  $seq{ $seq->id } = $seq;
+}
+my $nseq = scalar keys %seq;
+print STDERR "Loaded $nseq sequences.\n";
+
 my %feat;
 my %olap;
 my $nfeat=0;
-my $nseq=0;
 
 if ($gff) {
-  print STDERR "Loading reference: $ref\n";
-  my $fa = Bio::SeqIO->new(-file=>$ref, -format=>'fasta');
-  while (my $seq = $fa->next_seq) {
-    $seq{ $seq->id } = $seq;
-    $nseq++;
-  }
   print STDERR "Loading features: $gff\n";
   my $in = Bio::Tools::GFF->new(-file=>$gff, -gff_version=>3);
   while (my $f = $in->next_feature) {
     $f->attach_seq( $seq{ $f->seq_id } );
     $feat{++$nfeat} = $f;
     for my $pos ($f->start .. $f->end) {
-      $olap{$f->seq_id}->[$pos] = $nfeat;  # FIXME: should be push()
+      $olap{$f->seq_id}->[$pos] = $nfeat;  # FIXME: should be splice ?
     }
   }
-  print STDERR "Loaded $nseq sequences and $nfeat features.\n";
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Create a SNP table file
 
-#my %type_of = (0=>'snp', -1=>'ins', +1=>'del');
-
+my @ANNO = qw(FTYPE STRAND NT_POS AA_POS LOCUS_TAG GENE PRODUCT);
 my $count=0;
-print join("\t", qw(CHROM POS TYPE REF ALT EVIDENCE FEATURES)),"\n";
+print join("\t", qw(CHROM POS TYPE REF ALT EVIDENCE), @ANNO), "\n";
 
-print STDERR "Using reference: $ref\n";
-print STDERR "Using alignements: $bam\n";
 print STDERR "Parsing variants: $vcf\n";
 open VCF, '<', $vcf;
 while (<VCF>) {
@@ -71,25 +66,40 @@ while (<VCF>) {
   my($chr,$pos,undef,$ref_base,$alt_base,undef,undef,$tags) = split m/\t/;
   my $tag = vcf_tags_to_hash($tags);
 
+  my %anno = (map { ($_ => '') } @ANNO);
+  
   my $aff = '';
-  my $aff_featid = $olap{ $chr }[ $pos ]; 
+  # FIXME - need to do span on MNP or COMPLEX
+  my $aff_featid = $olap{ $chr }[ $pos ]; # does this overlap a feature?
   if ($aff_featid) {
     my $f = $feat{$aff_featid};
-    $aff = join(' ', $f->primary_tag, 
-      map { $f->get_tag_values($_) if $f->has_tag($_) } qw(locus_tag gene product) )   
+    $anno{FTYPE} = $f->primary_tag;
+    $anno{STRAND} = $f->strand < 0 ? '-' : $f->strand > 0 ? '+' : '.';
+    $anno{NT_POS} = $pos - $f->start + 1;
+    $anno{NT_POS} = $f->length - $anno{NT_POS} + 1 if $f->strand < 0;
+    for my $tag (@ANNO) {
+      $anno{$tag} = ($f->get_tag_values(lc($tag)))[0] if $f->has_tag(lc($tag));
+    }
+    if ($f->primary_tag eq 'CDS') {
+      $anno{AA_POS} = int( ($anno{NT_POS}+1.5) / 3 );
+    }
+    $anno{NT_POS} .= "/".$f->length;
+    $anno{AA_POS} .= "/".int($f->length/3);
   }
   my @evid;
   # freebayes VCF seems to use different tags when TYPE=indel ...
   my $RO = $tag->{RO} || '0';
   my $AO = $tag->{AO} || '0';  
-  push @evid, "$ref_base:$RO", "$alt_base:$AO";
-  push @evid, "N=".$tag->{DP} if $debug;
+  push @evid, "$alt_base:$AO", "$ref_base:$RO";
   my $evid = join(' ', @evid);
 
-  print join("\t", $chr, $pos, $tag->{TYPE}, $ref_base, $alt_base, $evid, $aff),"\n";
+
+  print join("\t", 
+    $chr, $pos, $tag->{TYPE}, $ref_base, $alt_base, (map { $anno{$_} } @ANNO)
+  ), "\n";
   $count++;  
 }
-print STDERR "Converted $count SNPs to TSV format.\n";
+print STDERR "Converted $count SNPs to TAB format.\n";
 
 #----------------------------------------------------------------------
 # name1=tag1;name2;name3=tag3 => HASH
@@ -114,9 +124,8 @@ sub setOptions {
   @Options = (
     {OPT=>"help!",     VAR=>\&usage,                DESC=>"This help"},
     {OPT=>"debug!",    VAR=>\$debug,   DEFAULT=>0,  DESC=>"Output verbose debug info"},
-    {OPT=>"auto!",     VAR=>\$auto,    DEFAULT=>0 , DESC=>"Autoset --vcf/bam/ref/gff to snippy names"},
+    {OPT=>"auto!",     VAR=>\$auto,    DEFAULT=>0 , DESC=>"Autoset --vcf/ref/gff to default Snippy names"},
     {OPT=>"vcf=s",     VAR=>\$vcf,     DEFAULT=>'', DESC=>"VCF input file"},
-    {OPT=>"bam=s",     VAR=>\$bam,     DEFAULT=>'', DESC=>"BAM alignment"},
     {OPT=>"ref=s",     VAR=>\$ref,     DEFAULT=>'', DESC=>"FASTA reference sequence"},
     {OPT=>"gff=s",     VAR=>\$gff,     DEFAULT=>'', DESC=>"GFF reference features"},
   );
@@ -135,7 +144,7 @@ sub setOptions {
 
 sub usage {
   print STDERR "Synopsis:\n  Convert a VCF (haploid) into TSV with column breakdown\n";
-  print STDERR "Usage:\n  $0 [options] --vcf snps.vcf --bam aln.bam --ref ref.fa > snps.csv\n";
+  print STDERR "Usage:\n  $0 [options] --ref ref.fa [--gff ref.gff] --vcf snps.vcf > snp.tab\n";
   print STDERR "Options:\n";
   foreach (@Options) {
     printf STDERR "  --%-13s %s%s.\n",$_->{OPT},$_->{DESC},

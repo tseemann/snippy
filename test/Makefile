@@ -6,16 +6,16 @@ quick: test3
 all: test1 test2 test3 test4
 
 test1:
-	../bin/snippy --outdir test1 --force --ref example.fna reads_R1.fastq.gz reads_R2.fastq.gz
+	../bin/snippy --outdir test1 --force --ref example.fna --pe1 reads_R1.fastq.gz --pe2 reads_R2.fastq.gz
 
 test2:
-	../bin/snippy --report --outdir test2 --force --ref example.fna reads_R1.fastq.gz reads_R2.fastq.gz
+	../bin/snippy --outdir test2 --force --ref example.fna --R1 reads_R1.fastq.gz --R2 reads_R2.fastq.gz
 
 test3:
-	../bin/snippy --outdir test3 --force --ref example.gbk reads_R1.fastq.gz reads_R2.fastq.gz
+	../bin/snippy --outdir test3 --force --ref example.gbk --R1 reads_R1.fastq.gz --pe2  reads_R2.fastq.gz
 
 test4:
-	../bin/snippy --report --outdir test4 --force --ref example.gbk reads_R1.fastq.gz
+	../bin/snippy --outdir test4 --force --ref example.gbk --se reads_R1.fastq.gz
 
 data:
 	rm -f reads*
