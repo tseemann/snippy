@@ -28,11 +28,11 @@ plas      221   mnp     GA      CT      CT:39 CT:0      ECO_0121       hypotheti
 plas     3319  complex  GATC    AATA    GATC:28 AATA:0  
 ```
 
-###Input Files
+##Input Files
 * a reference genome in FASTA or GENBANK format (can be in multiple contigs)
 * sequence read files in FASTQ or FASTA format (can be .gz compressed) format
 
-###Output Files
+##Output Files
 
 Extension | Description
 ----------|--------------
@@ -73,17 +73,25 @@ LOCUS_TAG | The ```/locus_tag``` of the feature (if it existed)
 GENE | The ```/gene``` tag of the feature (if it existed)
 PRODUCT | The ```/product``` tag of the feature (if it existed)
 
-###Etymology
+##Etymology
 The name Snippy is a combination of [SNP](http://en.wikipedia.org/wiki/Single-nucleotide_polymorphism) (pronounced "snip") , [snappy](http://www.thefreedictionary.com/snappy) (meaning "quick") and [Skippy the Bush Kangaroo](http://en.wikipedia.org/wiki/Skippy_the_Bush_Kangaroo) (to represent its Australian origin)
 
-###License
+##License
 Snippy is free software, released under the GPL (version 3).
 
-###Requirements
+##Requirements
 * Perl >= 5.6
 * BioPerl >= 1.6
 * bwa mem >= 0.7.12 
 * samtools >= 1.1
 * freebayes >= 0.9.20 
-* vcflib (vcfstreamsort, vcfuniq, vcffirstheader)
+* GNU parallel > 2013xxxx
+* freebayes sripts (freebayes-parallel, fasta_generate_regions.py)
+* vcflib (vcffilter, vcfstreamsort, vcfuniq, vcffirstheader)
+* vcftools (vcf-consensus)
+
+##Bundled binaries
+For a modern Linux system (Ubuntu >= 12.04) all the binaries and scripts are included. For MAC OS X only bwa, samtools and the scripts are included, as I could not compile binaries for the rest.
+
+
 
