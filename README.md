@@ -2,9 +2,7 @@
 
 Rapid haploid SNP calling by Torsten Seemann
 
-##Description
-
-###Synopsis
+##Synopsis
 Snippy finds SNPs between a haploid reference genome and your NGS sequence reads. It will find both substitutions (snps) and insertions/deletions (indels). It will use as many CPUsas you can give it on a single computer (tested to 64 cores). It is designed with speed in mind, and produces a clean set of output files.
 
 ##Quick Start
@@ -73,6 +71,12 @@ LOCUS_TAG | The ```/locus_tag``` of the feature (if it existed)
 GENE | The ```/gene``` tag of the feature (if it existed)
 PRODUCT | The ```/product``` tag of the feature (if it existed)
 
+##The variant caller
+The variant calling is done by [Freebayes](https://github.com/ekg/freebayes). However, Snippy uses a very simple model for reporting variants, relying on two main options:
+* ```--mincov``` is the minimum number of reads covering the variant position
+* ```--minfrac``` is the minimum proportion of those reads which must differ from the reference
+By default Snippy uses ```--mincov 10 --minfrac 0.9``` which is reasonable for most cases, but for very high coverage data you may get mixed populations such as (REF:310 ALT:28). Snippy may use a more statistical approach in future versions like [Nesoni](https://github.com/Victorian-Bioinformatics-Consortium/nesoni) does.
+
 ##Etymology
 The name Snippy is a combination of [SNP](http://en.wikipedia.org/wiki/Single-nucleotide_polymorphism) (pronounced "snip") , [snappy](http://www.thefreedictionary.com/snappy) (meaning "quick") and [Skippy the Bush Kangaroo](http://en.wikipedia.org/wiki/Skippy_the_Bush_Kangaroo) (to represent its Australian origin)
 
@@ -92,6 +96,4 @@ Snippy is free software, released under the GPL (version 3).
 
 ##Bundled binaries
 For a modern Linux system (Ubuntu >= 12.04) all the binaries and scripts are included. For MAC OS X only bwa, samtools and the scripts are included, as I could not compile binaries for the rest.
-
-
 
