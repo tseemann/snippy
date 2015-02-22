@@ -26,9 +26,10 @@ plas      221   mnp     GA      CT      CT:39 CT:0      ECO_0121       hypotheti
 plas     3319  complex  GATC    AATA    GATC:28 AATA:0  
 ```
 
-##Input Files
+##Input Requirements
 * a reference genome in FASTA or GENBANK format (can be in multiple contigs)
 * sequence read files in FASTQ or FASTA format (can be .gz compressed) format
+* a folder to put the results in
 
 ##Output Files
 
@@ -73,8 +74,9 @@ PRODUCT | The ```/product``` tag of the feature (if it existed)
 
 ##The variant caller
 The variant calling is done by [Freebayes](https://github.com/ekg/freebayes). However, Snippy uses a very simple model for reporting variants, relying on two main options:
-* ```--mincov``` is the minimum number of reads covering the variant position
-* ```--minfrac``` is the minimum proportion of those reads which must differ from the reference
+* ```--mincov``` is the minimum number of reads covering the variant position.
+* ```--minfrac``` is the minimum proportion of those reads which must differ from the reference.
+
 By default Snippy uses ```--mincov 10 --minfrac 0.9``` which is reasonable for most cases, but for very high coverage data you may get mixed populations such as (REF:310 ALT:28). Snippy may use a more statistical approach in future versions like [Nesoni](https://github.com/Victorian-Bioinformatics-Consortium/nesoni) does.
 
 ##Etymology
