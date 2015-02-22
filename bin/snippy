@@ -203,7 +203,7 @@ print GFF "##gff-version 3\n";
 open CSV, '>', "$prefix.csv";
 
 open HTML, '>', "$prefix.html";
-print HTML "<TABLE ID='$prefix'>\n";
+print HTML "<TABLE ID='$prefix' BORDER=1>\n";
 
 my %txt = (
   'Reference'     => $reference,
