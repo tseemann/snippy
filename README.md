@@ -1,9 +1,11 @@
 #Snippy
+Rapid haploid variant calling
 
-Rapid haploid SNP calling by Torsten Seemann
+##Author
+Torsten Seemann
 
 ##Synopsis
-Snippy finds SNPs between a haploid reference genome and your NGS sequence reads. It will find both substitutions (snps) and insertions/deletions (indels). It will use as many CPUsas you can give it on a single computer (tested to 64 cores). It is designed with speed in mind, and produces a clean set of output files.
+Snippy finds SNPs between a haploid reference genome and your NGS sequence reads. It will find both substitutions (snps) and insertions/deletions (indels). It will use as many CPUs as you can give it on a single computer (tested to 64 cores). It is designed with speed in mind, and produces a consistent set of output files in a single folder.
 
 ##Quick Start
 ```
@@ -16,7 +18,7 @@ Done.
 % ls mysnps
 reference/ snps.vcf snps.bed snps.gff snps.csv aln.bam  ...
 
-% head -5 mysnps/snps.csv
+% head -5 mysnps/snps.tab
 CHROM  POS      TYPE    REF     ALT     EVIDENCE        FEATURES
 chr      5958   snp     A       G       G:44 A:0        ECO_0001 dnaA replication protein DnaA
 chr     35524   snp     G       T       T:73 G:1 C:1      
