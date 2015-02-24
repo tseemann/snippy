@@ -95,7 +95,7 @@ while (<VCF>) {
 
 
   print join("\t", 
-    $chr, $pos, $tag->{TYPE}, $ref_base, $alt_base, (map { $anno{$_} } @ANNO)
+    $chr, $pos, $tag->{TYPE}, $ref_base, $alt_base, $evid, (map { $anno{$_} } @ANNO)
   ), "\n";
   $count++;  
 }
