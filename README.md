@@ -36,6 +36,7 @@ Found 2814 core SNPs from 96615 SNPs.
 % ls core.*
 core.aln core.tab core.tree core.tree.eps core.tree.svg
 ```
+#Calling SNPs
 
 ##Input Requirements
 * a reference genome in FASTA or GENBANK format (can be in multiple contigs)
@@ -100,6 +101,25 @@ The variant calling is done by [Freebayes](https://github.com/ekg/freebayes). Ho
 
 By default Snippy uses ```--mincov 10 --minfrac 0.9``` which is reasonable for most cases, but for very high coverage data you may get mixed populations such as (REF:310 ALT:28). Snippy may use a more statistical approach in future versions like [Nesoni](https://github.com/Victorian-Bioinformatics-Consortium/nesoni) does.
 
+#Core SNP phylogeny
+
+If you call SNPs for multiple isolates from the same reference, you can produce an alignment of "core SNPs" which can be used to build a high-resolution phylogeny (ignoring possible recombination). A "core site" is a genomic position that is present in _all_ the samples. A core site can have the same nucleotide in every sample ("monomorphic") or some samples can be different ("polymorphic" or "variant"). If we ignore the complications of "ins", "del" and "complex" variant types, and just use "snp" and "mnp" sites variant sites, these are the "core SNP genome".
+
+##Input Requirements
+* a set of Snippy folders which used the same ``--ref`` sequence.
+
+##Output Files
+
+Extension | Description
+----------|--------------
+.aln | A core SNP alignment in the ```--aformat``` format (default FASTA)
+.tab | Tab-separated columnar list of core SNP sites with alleles and annotations
+.tree | A phylogenetic tree in the ```--tformat``` format (default NEWICK)
+.tree.eps | An EPS image of the .tree file
+.tree.svg | An SVG image of the .tree file
+
+#Information
+
 ##Etymology
 The name Snippy is a combination of [SNP](http://en.wikipedia.org/wiki/Single-nucleotide_polymorphism) (pronounced "snip") , [snappy](http://www.thefreedictionary.com/snappy) (meaning "quick") and [Skippy the Bush Kangaroo](http://en.wikipedia.org/wiki/Skippy_the_Bush_Kangaroo) (to represent its Australian origin)
 
@@ -111,8 +131,8 @@ Snippy is free software, released under the GPL (version 3).
 * BioPerl >= 1.6
 * bwa mem >= 0.7.12 
 * samtools >= 1.1
-* freebayes >= 0.9.20 
 * GNU parallel > 2013xxxx
+* freebayes >= 0.9.20 
 * freebayes sripts (freebayes-parallel, fasta_generate_regions.py)
 * vcflib (vcffilter, vcfstreamsort, vcfuniq, vcffirstheader)
 * vcftools (vcf-consensus)
