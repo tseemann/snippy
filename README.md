@@ -1,9 +1,8 @@
 #Snippy
-
-Rapid haploid SNP calling by Torsten Seemann
+Rapid haploid variant calling by Torsten Seemann
 
 ##Synopsis
-Snippy finds SNPs between a haploid reference genome and your NGS sequence reads. It will find both substitutions (snps) and insertions/deletions (indels). It will use as many CPUsas you can give it on a single computer (tested to 64 cores). It is designed with speed in mind, and produces a clean set of output files.
+Snippy finds SNPs between a haploid reference genome and your NGS sequence reads. It will find both substitutions (snps) and insertions/deletions (indels). It will use as many CPUs as you can give it on a single computer (tested to 64 cores). It is designed with speed in mind, and produces a consistent set of output files in a single folder.
 
 ##Quick Start
 ```
@@ -14,16 +13,17 @@ Results folder: mysnps
 Done.
 
 % ls mysnps
-reference/ snps.vcf snps.bed snps.gff snps.csv aln.bam  ...
+snps.vcf snps.bed snps.gff snps.csv snps.tab snps.html
+snps.bam snps.txt reference/ ...
 
-% head -5 mysnps/snps.csv
-CHROM  POS      TYPE    REF     ALT     EVIDENCE        FEATURES
-chr      5958   snp     A       G       G:44 A:0        ECO_0001 dnaA replication protein DnaA
-chr     35524   snp     G       T       T:73 G:1 C:1      
-chr     45722   ins     ATT     ATTT    ATTT:43 ATT:1   ECO_0045 gyrA gyrase
-chr    100541   del     CAAA    CAA     CAA:38 CAAA:1   ECO_0121       hypothetical protein
-plas      221   mnp     GA      CT      CT:39 CT:0      ECO_0121       hypothetical protein
-plas     3319  complex  GATC    AATA    GATC:28 AATA:0  
+% head -5 mysnps/snps.tab
+CHROM  POS     TYPE    REF   ALT    EVIDENCE        FTYPE STRAND NT_POS AA_POS LOCUS_TAG GENE PRODUCT
+chr      5958  snp     A     G      G:44 A:0        CDS   +      41/600 13/200 ECO_0001  dnaA replication protein DnaA
+chr     35524  snp     G     T      T:73 G:1 C:1    tRNA  -   
+chr     45722  ins     ATT   ATTT   ATTT:43 ATT:1   CDS   -                    ECO_0045  gyrA DNA gyrase
+chr    100541  del     CAAA  CAA    CAA:38 CAAA:1   CDS   +                    ECO_0179      hypothetical protein
+plas      619  complex GATC  AATA   GATC:28 AATA:0  
+plas     3221  mnp     GA    CT     CT:39 CT:0      CDS   +                    ECO_p012  rep  hypothetical protein
 ```
 
 ##Input Requirements
@@ -71,6 +71,16 @@ AA_POS | Residue position / Length in aa (only if FTYPE is CDS)
 LOCUS_TAG | The ```/locus_tag``` of the feature (if it existed)
 GENE | The ```/gene``` tag of the feature (if it existed)
 PRODUCT | The ```/product``` tag of the feature (if it existed)
+
+##Variant Types
+
+Type | Name | Example
+-----|------|-------------
+snp  | Single Nucleotide Polymorphism |  A => T
+mnp  | Multiple Nuclotide Polymorphism | GC => AT
+ins  | Insertion | ATT => AGTT
+del  | Deletion | ACGG => ACG
+complex | Combination of snp/mnp | ATTC => GTTA
 
 ##The variant caller
 The variant calling is done by [Freebayes](https://github.com/ekg/freebayes). However, Snippy uses a very simple model for reporting variants, relying on two main options:
