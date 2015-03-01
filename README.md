@@ -1,6 +1,8 @@
 #Snippy
 Rapid haploid variant calling and core SNP phylogeny
-Torsten Seemann
+
+##Author
+Torsten Seemann (@torstenseemann)
 
 ##Synopsis
 Snippy finds SNPs between a haploid reference genome and your NGS sequence reads. It will find both substitutions (snps) and insertions/deletions (indels). It will use as many CPUs as you can give it on a single computer (tested to 64 cores). It is designed with speed in mind, and produces a consistent set of output files in a single folder.
