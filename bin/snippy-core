@@ -1,0 +1,210 @@
+#!/usr/bin/env perl
+use warnings;
+use strict;
+use Time::Piece;
+use List::Util qw(any);
+use File::Spec;
+use Bio::AlignIO;
+use Bio::LocatableSeq;
+use Data::Dumper;
+use Bio::Align::DNAStatistics;
+use Bio::Tree::DistanceFactory;
+use Bio::TreeIO;
+use Bio::Tree::Draw::Cladogram;
+
+my $REF = 'Reference';
+
+my(@Options, $quiet, $verbose, $noref, $prefix, $aformat, $tformat);
+setOptions();
+
+my $anno;
+my $snp;
+my %seen;
+$seen{$REF}++ unless $noref;
+
+for my $dir (@ARGV) {
+  my $id = dir_to_id($dir);
+  msg("Using ID '$id' for $dir");
+  $seen{$id}++ and err("ID '$id' already exists.");
+  add_snippy($id, $dir, $noref);
+}
+
+my @id = sort keys %seen;
+my $N = scalar(@id);
+msg("Including '$REF' in results.") unless $noref;
+msg("Loaded $N SNP tables:");
+msg("@id");
+
+#print Dumper($snp);
+my $table_fn = "$prefix.tab";
+open TABLE, '>', $table_fn;
+print TABLE tsv('CHR','POS',@id,'LOCUS_TAG','GENE','PRODUCT');
+
+msg("Building core SNP alignment");
+my $nsites = 0;
+my $ncore = 0;
+my %aln;
+for my $seq (sort keys %$snp) {
+  for my $pos (sort { $a <=> $b } keys %{$snp->{$seq}}) {
+    my $var = $snp->{$seq}{$pos};
+    $nsites++;
+    next unless $N == scalar(keys %$var);     # core?
+    my @var = map { $var->{$_} } @id;
+    next if not (any { $_ ne $var[0] } @var); # monomorphic?
+    msg("$seq:$pos @var") if $verbose;
+    map { $aln{$_} .= $var->{$_} } @id;       # append
+    print TABLE tsv($seq, $pos, @var, @{$anno->{$seq}{$pos}});
+    $ncore++;
+  }
+}
+msg("Found $ncore core SNPs from $nsites SNPs.");
+
+msg("Constructing alignment.");
+my $aln_obj = Bio::SimpleAlign->new(-id=>$0);
+for my $id (keys %aln) {
+  $aln_obj->add_seq(
+    Bio::LocatableSeq->new(
+      -id    => $id,
+      -seq   => $aln{$id},
+      -start => 1,
+      -end   => length($aln{$id}),
+    )
+  );
+}
+$aln_obj->set_displayname_flat(); # remove "/start-end" suffix
+my $aln_fn = "$prefix.aln";
+msg("Saving $aformat alignment: $aln_fn");
+my $out = Bio::AlignIO->new(-file=>">$aln_fn", -format=>$aformat);
+$out->write_aln($aln_obj);
+
+msg("Constructing NJ tree.");
+my $stats = Bio::Align::DNAStatistics->new();
+my $matrix = $stats->distance(-method=>'Kimura', -align=>$aln_obj);
+my $dfactory = Bio::Tree::DistanceFactory->new(-method=>'NJ');
+my $tree = $dfactory->make_tree($matrix);
+
+my $tree_fn = "$prefix.tree";
+msg("Saving Newick tree: $tree_fn");                   
+my $treeout = Bio::TreeIO->new(-file=>">$tree_fn", -format=>$tformat);
+$treeout->write_tree($tree);
+
+my $cladogram_fn = "$prefix.tree.eps";
+msg("Saving cladogram: $cladogram_fn");
+my $cladogram = Bio::Tree::Draw::Cladogram->new(-tree=>$tree);
+$cladogram->print(-file => $cladogram_fn);
+
+my $svg_fn = "$prefix.tree.svg";
+msg("Saving SVG tree: $svg_fn");
+my $svg_out = Bio::TreeIO->new(-file=>">$svg_fn", -format=>'svggraph');
+$svg_out->write_tree($tree);
+
+msg("Saved SNP table: $table_fn");
+
+msg("Done.");
+
+#----------------------------------------------------------------------
+
+sub tsv {
+  return join("\t", map { defined($_) ? $_ : '.' } @_)."\n";
+}
+
+#----------------------------------------------------------------------
+
+sub dir_to_id {
+  my($dir) = @_;
+  my @dir = File::Spec->splitpath($dir);
+  return $dir[-1];  
+}
+
+#----------------------------------------------------------------------
+
+sub add_snippy {
+  my($id, $dir, $noref) = @_;
+  msg("Checking Snippy folder: $dir");
+  -d $dir or err("Not a folder: $dir");
+  my($snp_file) = glob("$dir/*.tab");
+  msg("Detected variant file: $snp_file");
+  open SNPS, '<', $snp_file;
+  my $header = <SNPS>;
+  $header =~ m/^CHROM/ or err("Unexpected header in $snp_file: $header");
+  my $num=0;
+  my $len=0;
+  while (<SNPS>) {
+    chomp;
+    my($seq,$pos,$type,$ref,$alt,
+       undef,undef,undef,undef,undef,
+       $ltag, $gene, $prod) = split m/\t/;
+    # 0:SEQ 1:POS 2:TYPE 3:REF 4:ALT 
+    # 5:EVID 6:FTYPE 7:STRAND 8:NT 9:AA 
+    # 10:LOCUS 11:GENE 12:PRODUCT
+    next unless $type eq 'snp' or $type eq 'mnp'; # no complex,ins,del
+    next unless length($ref) eq length($alt);     # double check REF / ALT
+    for my $offset (0 .. length($alt) - 1) {      # handle MNP (>1 pos)
+      $snp->{$seq}{$pos+$offset}{$id}  = substr($alt,$offset,1);
+      $snp->{$seq}{$pos+$offset}{$REF} = substr($ref,$offset,1) unless $noref;
+      $len++;
+    }
+    $anno->{$seq}{$pos} = [ $ltag, $gene, $prod ]; # save annotation for TABLE
+    $num++;
+  }
+  close SNPS;
+  msg("$id: found $num variants totalling $len bp in $snp_file");
+}
+
+#----------------------------------------------------------------------
+ 
+sub msg {
+  return if $quiet;
+  my $t = localtime;
+  my $line = "[".$t->hms."] @_\n";
+  print STDERR $line;
+}
+         
+#----------------------------------------------------------------------
+ 
+sub err {
+  msg(@_);
+  exit(-1);
+}
+       
+#----------------------------------------------------------------------
+# Option setting routines
+
+sub setOptions {
+  use Getopt::Long;
+
+  @Options = (
+    {OPT=>"help!",      VAR=>\&usage,                  DESC=>"This help"},
+    {OPT=>"quiet!",     VAR=>\$quiet,     DEFAULT=>0 , DESC=>"No output to stderr"},
+    {OPT=>"verbose!",   VAR=>\$verbose,   DEFAULT=>0 , DESC=>"Verbose output"},
+    {OPT=>"prefix=s",   VAR=>\$prefix,    DEFAULT=>'core' , DESC=>"Output file prefix"},
+    {OPT=>"noref!",     VAR=>\$noref,     DEFAULT=>0 , DESC=>"Exclude reference"},
+    {OPT=>"aformat=s",  VAR=>\$aformat,   DEFAULT=>'fasta' , DESC=>"Output alignment format: nexus fasta phylip maf clustalw ..."},
+    {OPT=>"tformat=s",  VAR=>\$tformat,   DEFAULT=>'newick' , DESC=>"Output tree format: newick nexus cluster nexml ..."},
+  );
+
+  (!@ARGV) && (usage());
+
+  &GetOptions(map {$_->{OPT}, $_->{VAR}} @Options) || usage();
+
+  # Now setup default values.
+  foreach (@Options) {
+    if (defined($_->{DEFAULT}) && !defined(${$_->{VAR}})) {
+      ${$_->{VAR}} = $_->{DEFAULT};
+    }
+  }
+}
+
+sub usage {
+  print STDERR "Synopsis:\n  Combine multiple Snippy folders into a core SNP alignment\n";
+  print STDERR "Usage:\n";
+  print STDERR "  $0 [options] [--noref] snippyDir1/ snippyDir2/ snippyDir3/ ...\n";
+  print STDERR "Options:\n";
+  foreach (@Options) {
+    printf STDERR "  --%-13s %s%s.\n",$_->{OPT},$_->{DESC},
+                  defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";
+  }
+  exit(1);
+}
+ 
+#----------------------------------------------------------------------
