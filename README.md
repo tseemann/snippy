@@ -1,8 +1,10 @@
 #Snippy
-Rapid haploid variant calling by Torsten Seemann
+Rapid haploid variant calling and core SNP phylogeny
+Torsten Seemann
 
 ##Synopsis
 Snippy finds SNPs between a haploid reference genome and your NGS sequence reads. It will find both substitutions (snps) and insertions/deletions (indels). It will use as many CPUs as you can give it on a single computer (tested to 64 cores). It is designed with speed in mind, and produces a consistent set of output files in a single folder.
+It can then take a set of Snippy results using the same reference and generate a core SNP alignment and tree.
 
 ##Quick Start
 ```
@@ -24,6 +26,13 @@ chr     45722  ins     ATT   ATTT   ATTT:43 ATT:1   CDS   -                    E
 chr    100541  del     CAAA  CAA    CAA:38 CAAA:1   CDS   +                    ECO_0179      hypothetical protein
 plas      619  complex GATC  AATA   GATC:28 AATA:0  
 plas     3221  mnp     GA    CT     CT:39 CT:0      CDS   +                    ECO_p012  rep  hypothetical protein
+
+% snippy-core --prefix core mysnps1 mysnps2 mysnps3 mysnps4 
+Loaded 4 SNP tables.
+Found 2814 core SNPs from 96615 SNPs.
+
+% ls core.*
+core.aln core.tab core.tree core.tree.eps core.tree.svg
 ```
 
 ##Input Requirements
