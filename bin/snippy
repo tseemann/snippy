@@ -13,8 +13,8 @@ use Bio::Tools::GFF;
 # global variables
 
 my $EXE = $FindBin::RealScript;
-my $BINDIR = $FindBin::Bin;
-my $VERSION = "2.2";
+my $BINDIR = $FindBin::RealBin;
+my $VERSION = "2.3";
 my $SYNOPSIS = "fast bacterial variant calling from NGS reads";
 my $AUTHOR = 'Torsten Seemann <torsten.seemann@gmail.com>';
 my $URL = 'https://github.com/Victorian-Bioinformatics-Consortium/snippy';
