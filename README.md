@@ -29,7 +29,7 @@ chr    100541  del     CAAA  CAA    CAA:38 CAAA:1   CDS   +                    E
 plas      619  complex GATC  AATA   GATC:28 AATA:0  
 plas     3221  mnp     GA    CT     CT:39 CT:0      CDS   +                    ECO_p012  rep  hypothetical protein
 
-% snippy-core --prefix core mysnps1 mysnps2 mysnps3 mysnps4 
+% snippy-core --prefix core --trees mysnps1 mysnps2 mysnps3 mysnps4 
 Loaded 4 SNP tables.
 Found 2814 core SNPs from 96615 SNPs.
 
@@ -114,6 +114,13 @@ Extension | Description
 ----------|--------------
 .aln | A core SNP alignment in the ```--aformat``` format (default FASTA)
 .tab | Tab-separated columnar list of core SNP sites with alleles and annotations
+.txt | Tab-separated columnar list of alignment/core-size statistics
+
+If you also use the ```--trees``` option, you will get some quick and dirty tree files and pictures. 
+The .tree is a Kimura NJ tree.
+
+Extension | Description
+----------|--------------
 .tree | A phylogenetic tree in the ```--tformat``` format (default NEWICK)
 .tree.eps | An EPS image of the .tree file
 .tree.svg | An SVG image of the .tree file
