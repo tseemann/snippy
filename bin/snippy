@@ -14,7 +14,7 @@ use Bio::Tools::GFF;
 
 my $EXE = $FindBin::RealScript;
 my $BINDIR = $FindBin::RealBin;
-my $VERSION = "2.4-dev";
+my $VERSION = "2.4";
 my $SYNOPSIS = "fast bacterial variant calling from NGS reads";
 my $AUTHOR = 'Torsten Seemann <torsten.seemann@gmail.com>';
 my $URL = 'https://github.com/Victorian-Bioinformatics-Consortium/snippy';
@@ -120,7 +120,9 @@ my $out = Bio::SeqIO->new(-file=>">$refdir/ref.fa", -format=>'fasta');
 my $gff = Bio::Tools::GFF->new(-file=>">$refdir/ref.gff", -gff_version=>3);
 my $nseq = 0;
 my $nfeat = 0;
+my %refseq;
 while (my $seq = $in->next_seq) {
+  $refseq{ $seq->id } = uc($seq->seq); # keep for masking later
   $out->write_seq($seq);
   $nseq++;
   for my $f ($seq->get_SeqFeatures) {
@@ -192,6 +194,27 @@ for my $cmd (@cmd) {
   $cmd .= " 2>> $log_file";
   msg("Running: $cmd");
   system($cmd)==0 or err("Error running command, check $outdir/$log_file");
+}
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# produce the depth-masked reference
+
+my $afa_fn = "$prefix.aligned.fa";
+msg("Generating aligned/masked FASTA relative to reference: $afa_fn");
+my %masked;
+for my $id (keys %refseq) {
+  $masked{$id} = '-'x(length($refseq{$id})); 
+}
+open my $depth_fh, '-|', "bgzip -c -d \Q$prefix.depth.gz";
+while (<$depth_fh>) {
+  my($seqid, $pos, $cov) = split m/\t/;
+  my $new = $cov < $mincov ? 'N' : substr($refseq{$seqid}, $pos-1, 1);
+  substr $masked{$seqid}, $pos-1, 1, $new;
+}
+close $depth_fh;
+my $afa_fh = Bio::SeqIO->new(-file=>">$afa_fn", -format=>'fasta');
+for my $id (sort keys %masked) {
+  $afa_fh->write_seq( Bio::Seq->new(-id=>$id, -seq=>$masked{$id}) );
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 

@@ -11,39 +11,100 @@ use Bio::Align::DNAStatistics;
 use Bio::Tree::DistanceFactory;
 use Bio::TreeIO;
 use Bio::Tree::Draw::Cladogram;
+use Bio::SeqIO;
 
 my $REF = 'Reference';
 
-my(@Options, $quiet, $verbose, $noref, $prefix, $aformat, $tformat);
+my(@Options, $quiet, $verbose, $inprefix, $noref, $mincov, $prefix, $aformat, $tformat);
 setOptions();
 
 my $anno;
 my $snp;
-my %seen;
-$seen{$REF}++ unless $noref;
+my %dir_of;
+my %refseq;
+my %gapseq;
+my $reflen;
 
 for my $dir (@ARGV) {
   my $id = dir_to_id($dir);
+  exists $dir_of{$id} and err("ID '$id' already exists.");
   msg("Using ID '$id' for $dir");
-  $seen{$id}++ and err("ID '$id' already exists.");
+  $dir_of{$id} = $dir;
   add_snippy($id, $dir, $noref);
+  # load the reference genome for first time through loop
+  if (not keys %refseq) {
+    my $in = Bio::SeqIO->new(-file=>"$dir/reference/ref.fa", -format=>'fasta');
+    while (my $s = $in->next_seq) {
+      $refseq{ $s->id } = $s->seq;
+      $gapseq{ $s->id } = '-'x($s->length);
+      $reflen += $s->length;
+    }
+  }
 }
 
-my @id = sort keys %seen;
+my @id = sort keys %dir_of;
 my $N = scalar(@id);
-msg("Including '$REF' in results.") unless $noref;
-msg("Loaded $N SNP tables:");
-msg("@id");
+msg("Loaded $N SNP tables.");
+
+unless ($noref) {
+  msg("Including '$REF' in results.");
+  unshift @id, $REF;
+  $N++;
+}
+
+my $txt_fn = "$prefix.txt";
+msg("Will write alignment statistics to $txt_fn");
+open my $txt_fh, '>', $txt_fn;
+
+msg("Patching covered bases into whole genome alignment...");
+my %aln;
+for my $id (@id) {
+  if ($id eq $REF) {
+    $aln{$REF} = { %refseq };
+    next;
+  }
+  my %tmp = (%gapseq); # blank gap template
+  my $count=0;
+  my $depth_fn = "$dir_of{$id}/$inprefix.depth.gz"; # samtools depth output
+  -r $depth_fn or err("Can not open: $depth_fn");
+  open my $depth_fh, '-|', "bgzip -c -d \Q$depth_fn\E";
+  while (<$depth_fh>) {
+    my($seqid, $pos, $cov) = split m/\t/;
+    my $new = $cov < $mincov ? 'N' : substr($refseq{$seqid}, $pos-1, 1);
+    substr $tmp{$seqid}, $pos-1, 1, $new; # patch AGTC/N into gap template
+#    $count++ if $new ne 'N';
+    if ($new ne 'N') {
+      $count++;
+      $snp->{$seqid}{$pos}{$id} ||= $new;
+    } 
+  }
+  $aln{$id} = { %tmp };
+  my $pc = sprintf "%.2f", $count*100/$reflen;
+  msg("$id coverage $count/$reflen = $pc%");
+  print $txt_fh tsv($id, $count, $reflen, $pc);
+}
+
+msg("Patching variant sites into whole genome alignment...");
+for my $seq (keys %$snp) {
+  for my $pos (keys %{$snp->{$seq}}) {
+    my $var = $snp->{$seq}{$pos};
+    for my $id (keys %$var) {
+      substr $aln{$id}{$seq}, $pos-1, 1, $var->{$id};
+    }
+  }
+}
+
+save_hash_alignment(\%aln, "$prefix.full.aln", $aformat);
 
 #print Dumper($snp);
 my $table_fn = "$prefix.tab";
 open TABLE, '>', $table_fn;
 print TABLE tsv('CHR','POS',@id,'LOCUS_TAG','GENE','PRODUCT');
 
-msg("Building core SNP alignment");
+msg("Writing core SNP table");
 my $nsites = 0;
 my $ncore = 0;
-my %aln;
+my %valn;
 for my $seq (sort keys %$snp) {
   for my $pos (sort { $a <=> $b } keys %{$snp->{$seq}}) {
     my $var = $snp->{$seq}{$pos};
@@ -52,34 +113,19 @@ for my $seq (sort keys %$snp) {
     my @var = map { $var->{$_} } @id;
     next if not (any { $_ ne $var[0] } @var); # monomorphic?
     msg("$seq:$pos @var") if $verbose;
-    map { $aln{$_} .= $var->{$_} } @id;       # append
+    map { $valn{$_} .= $var->{$_} } @id;       # append
     print TABLE tsv($seq, $pos, @var, @{$anno->{$seq}{$pos}});
     $ncore++;
   }
 }
 msg("Found $ncore core SNPs from $nsites SNPs.");
+msg("Saved SNP table: $table_fn");
 
-msg("Constructing alignment.");
-my $aln_obj = Bio::SimpleAlign->new(-id=>$0);
-for my $id (keys %aln) {
-  $aln_obj->add_seq(
-    Bio::LocatableSeq->new(
-      -id    => $id,
-      -seq   => $aln{$id},
-      -start => 1,
-      -end   => length($aln{$id}),
-    )
-  );
-}
-$aln_obj->set_displayname_flat(); # remove "/start-end" suffix
-my $aln_fn = "$prefix.aln";
-msg("Saving $aformat alignment: $aln_fn");
-my $out = Bio::AlignIO->new(-file=>">$aln_fn", -format=>$aformat);
-$out->write_aln($aln_obj);
+my $core_aln = save_hash_alignment(\%valn, "$prefix.aln", $aformat);
 
-msg("Constructing NJ tree.");
+msg("Constructing NJ tree from core variant sites.");
 my $stats = Bio::Align::DNAStatistics->new();
-my $matrix = $stats->distance(-method=>'Kimura', -align=>$aln_obj);
+my $matrix = $stats->distance(-method=>'Kimura', -align=>$core_aln);
 my $dfactory = Bio::Tree::DistanceFactory->new(-method=>'NJ');
 my $tree = $dfactory->make_tree($matrix);
 
@@ -98,9 +144,32 @@ msg("Saving SVG tree: $svg_fn");
 my $svg_out = Bio::TreeIO->new(-file=>">$svg_fn", -format=>'svggraph');
 $svg_out->write_tree($tree);
 
-msg("Saved SNP table: $table_fn");
-
 msg("Done.");
+
+#----------------------------------------------------------------------
+
+sub save_hash_alignment {
+  my($aln, $outfile, $format) = @_;
+  msg("Constructing alignment object for $outfile");
+  my $aln_obj = Bio::SimpleAlign->new(-id=>$outfile);
+  for my $id (sort keys %{$aln}) {
+    my $dna = ref($aln->{$id}) eq 'HASH'
+            ? join( '', map { $aln->{$id}{$_} } (sort keys %{$aln->{$id}}) )
+            : $aln->{$id};
+    $aln_obj->add_seq(
+      Bio::LocatableSeq->new(
+        -id    => $id,
+        -seq   => $dna,
+        -start => 1,
+      )
+    );
+  }
+  $aln_obj->set_displayname_flat(); # remove "/start-end" suffix
+  msg("Writing '$format' alignment to $outfile");
+  my $out = Bio::AlignIO->new(-file=>">$outfile", -format=>$format);
+  $out->write_aln($aln_obj);
+  return $aln_obj;
+}
 
 #----------------------------------------------------------------------
 
@@ -122,7 +191,8 @@ sub add_snippy {
   my($id, $dir, $noref) = @_;
   msg("Checking Snippy folder: $dir");
   -d $dir or err("Not a folder: $dir");
-  my($snp_file) = glob("$dir/*.tab");
+  my $snp_file = "$dir/$inprefix.tab";
+  -r $snp_file or err("Could not find '$snp_file'. Not a Snippy folder or wrong --inprefix ?");
   msg("Detected variant file: $snp_file");
   open SNPS, '<', $snp_file;
   my $header = <SNPS>;
@@ -177,8 +247,10 @@ sub setOptions {
     {OPT=>"help!",      VAR=>\&usage,                  DESC=>"This help"},
     {OPT=>"quiet!",     VAR=>\$quiet,     DEFAULT=>0 , DESC=>"No output to stderr"},
     {OPT=>"verbose!",   VAR=>\$verbose,   DEFAULT=>0 , DESC=>"Verbose output"},
+    {OPT=>"inprefix=s", VAR=>\$inprefix,  DEFAULT=>'snps' , DESC=>"Input prefix of Snippy files"},
     {OPT=>"prefix=s",   VAR=>\$prefix,    DEFAULT=>'core' , DESC=>"Output file prefix"},
     {OPT=>"noref!",     VAR=>\$noref,     DEFAULT=>0 , DESC=>"Exclude reference"},
+    {OPT=>"mincov=i",   VAR=>\$mincov,    DEFAULT=>10 , DESC=>"Minimum depth of coverage to consider core"},
     {OPT=>"aformat=s",  VAR=>\$aformat,   DEFAULT=>'fasta' , DESC=>"Output alignment format: nexus fasta phylip maf clustalw ..."},
     {OPT=>"tformat=s",  VAR=>\$tformat,   DEFAULT=>'newick' , DESC=>"Output tree format: newick nexus cluster nexml ..."},
   );
