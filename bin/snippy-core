@@ -55,6 +55,7 @@ unless ($noref) {
 my $txt_fn = "$prefix.txt";
 msg("Will write alignment statistics to $txt_fn");
 open my $txt_fh, '>', $txt_fn;
+print $txt_fh tsv('ID', 'Aligned Bases', 'Reference bases', '% Aligned Bases');
 
 msg("Patching covered bases into whole genome alignment...");
 my %aln;
