@@ -192,11 +192,10 @@ sub dir_to_id {
 
 sub add_snippy {
   my($id, $dir, $noref) = @_;
-  msg("Checking Snippy folder: $dir");
   -d $dir or err("Not a folder: $dir");
   my $snp_file = "$dir/$inprefix.tab";
   -r $snp_file or err("Could not find '$snp_file'. Not a Snippy folder or wrong --inprefix ?");
-  msg("Detected variant file: $snp_file");
+  msg("$id: using Snippy variant file: $snp_file");
   open SNPS, '<', $snp_file;
   my $header = <SNPS>;
   $header =~ m/^CHROM/ or err("Unexpected header in $snp_file: $header");
