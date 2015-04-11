@@ -36,6 +36,23 @@ Found 2814 core SNPs from 96615 SNPs.
 % ls core.*
 core.aln core.tab core.tree core.tree.eps core.tree.svg
 ```
+
+#Installation
+
+##Homebrew
+Install [HomeBrew](http://brew.sh/) (Mac OS X) or [LinuxBrew](http://brew.sh/linuxbrew/) (Linux).
+    brew tap homebrew/science
+    brew tap chapmanb/cbl
+    brew tap tseemann/homebrew-bioinformatics-linux
+    brew install snippy
+    snippy --help
+
+##Source
+This will install the latest version direct from Github. You'll need to add the ```bin``` directory to your PATH.
+    cd $HOME
+    git clone https://github.com/tseemann/snippy.git
+    $HOME/snippy/bin/snippy --help
+
 #Calling SNPs
 
 ##Input Requirements
