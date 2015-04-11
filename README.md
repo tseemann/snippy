@@ -134,7 +134,7 @@ The name Snippy is a combination of [SNP](http://en.wikipedia.org/wiki/Single-nu
 Snippy is free software, released under the GPL (version 3).
 
 ##Issues
-Please submit suggestions and bug reports here: https://github.com/Victorian-Bioinformatics-Consortium/snippy/issues
+Please submit suggestions and bug reports here: https://github.com/tseemann/snippy/issues
 
 ##Requirements
 * Perl >= 5.6
