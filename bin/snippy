@@ -55,8 +55,10 @@ for my $exe (qw(bwa samtools tabix bgzip
                 parallel freebayes freebayes-parallel fasta_generate_regions.py 
                 vcffilter vcfstreamsort vcfuniq vcffirstheader vcf-consensus
                 snippy-vcf_to_tab snippy-vcf_report)) {
-  system("which $exe > /dev/null")==0 or err("Can not find '$exe' in PATH");
-  msg("Found $exe - ok.");
+  my($which) = qx(which $exe 2> /dev/null);
+  $which or err("Can not find required '$exe' in PATH");
+  chomp $which;
+  msg("Found $exe - $which");
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
