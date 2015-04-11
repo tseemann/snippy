@@ -170,8 +170,5 @@ Please submit suggestions and bug reports here: https://github.com/tseemann/snip
 * vcftools (vcf-consensus)
 
 ##Bundled binaries
-For a modern Linux system (Ubuntu >= 12.04) all the binaries and scripts are included. 
-
-For MAC OS X all binaries except vcflib as I could not compile binaries for those 3 tools.
-
+For a modern Linux system (Ubuntu >= 12.04) and Mac OS X all the binaries and scripts are included. 
 
