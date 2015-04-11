@@ -43,6 +43,7 @@ for my $dir (@ARGV) {
 }
 
 my @id = sort keys %dir_of;
+my %progress = map { ( $id[$_] => $_.'/'.scalar(@id) ) } (0 .. $#id);
 my $N = scalar(@id);
 msg("Loaded $N SNP tables.");
 
@@ -71,17 +72,28 @@ for my $id (@id) {
     $covered += $seq->seq =~ tr/AGTC/AGTC/; # count DNA
   }
   my $pc = sprintf "%.2f", $covered*100/$reflen;
-  msg("$id coverage $covered/$reflen = $pc%");
+  msg("$progress{$id}\t$id coverage $covered/$reflen = $pc%");
   print $txt_fh tsv($id, $covered, $reflen, $pc);
 }
 
 msg("Patching variant sites into whole genome alignment...");
 for my $seq (keys %$snp) {
   for my $pos (keys %{$snp->{$seq}}) {
-    my $var = $snp->{$seq}{$pos};
-    for my $id (keys %$var) {
-      # The SNP table was converted to solely 1 nuc SNPs
-      substr $aln{$id}{$seq}, $pos-1, 1, $var->{$id};
+    my $var = $snp->{$seq}{$pos};    
+#    for my $id (keys %$var) {
+#      substr $aln{$id}{$seq}, $pos-1, 1, $var->{$id};
+#    }
+    for my $id (@id) {
+      if ($var->{$id}) {
+        # if a SNP for this ID, patch it into the alignment
+        substr $aln{$id}{$seq}, $pos-1, 1, $var->{$id};
+      }
+      else {
+        # else patch in the base
+        my $base = substr $aln{$id}{$seq}, $pos-1, 1;
+        # unless it was a - (no reads) or N (low depth)
+        $var->{$id} = $base if $base ne 'N' and $base ne '-';
+      }
     }
   }
 }
@@ -186,7 +198,7 @@ sub add_snippy {
   -d $dir or err("Not a folder: $dir");
   my $snp_file = "$dir/$inprefix.tab";
   -r $snp_file or err("Could not find '$snp_file'. Not a Snippy folder or wrong --inprefix ?");
-  msg("$id: using Snippy variant file: $snp_file");
+#  msg("$id: using Snippy variant file: $snp_file");
   open SNPS, '<', $snp_file;
   my $header = <SNPS>;
   $header =~ m/^CHROM/ or err("Unexpected header in $snp_file: $header");
