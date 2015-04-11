@@ -41,6 +41,7 @@ core.aln core.tab core.tree core.tree.eps core.tree.svg
 
 ##Homebrew
 Install [HomeBrew](http://brew.sh/) (Mac OS X) or [LinuxBrew](http://brew.sh/linuxbrew/) (Linux).
+
     brew tap homebrew/science
     brew tap chapmanb/cbl
     brew tap tseemann/homebrew-bioinformatics-linux
@@ -49,6 +50,7 @@ Install [HomeBrew](http://brew.sh/) (Mac OS X) or [LinuxBrew](http://brew.sh/lin
 
 ##Source
 This will install the latest version direct from Github. You'll need to add the ```bin``` directory to your PATH.
+
     cd $HOME
     git clone https://github.com/tseemann/snippy.git
     $HOME/snippy/bin/snippy --help
