@@ -17,7 +17,7 @@ my $BINDIR = $FindBin::RealBin;
 my $VERSION = "2.5";
 my $SYNOPSIS = "fast bacterial variant calling from NGS reads";
 my $AUTHOR = 'Torsten Seemann <torsten.seemann@gmail.com>';
-my $URL = 'https://github.com/Victorian-Bioinformatics-Consortium/snippy';
+my $URL = 'https://github.com/tseemann/snippy';
 my $OPSYS = $^O;
 my $t0 = localtime;
 
