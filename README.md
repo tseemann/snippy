@@ -60,6 +60,9 @@ Extension | Description
 .raw.vcf | The unfiltered variant calls from Freebayes
 .log | A log file with the commands run and their outputs
 .consensus.fa | A version of the reference genome with all variants instantiated
+.aligned.fa | A version of the reference but with - for unaligned and N for depth < --minfrac (**does not have variants**)
+.depth.gz | Output of ```samtools depth``` for the .bam file
+.depth.gz.tbi | Index for the .depth.gz (_currently unused_)
 
 ##Columns in the TAB/CSV/HTML formats
 
