@@ -187,6 +187,7 @@ sub tsv {
 
 sub dir_to_id {
   my($dir) = @_;
+  $dir =~ s{/$}{}; # remove trailing slash first
   my @dir = File::Spec->splitpath($dir);
   return $dir[-1];  
 }
