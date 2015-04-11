@@ -57,32 +57,22 @@ msg("Will write alignment statistics to $txt_fn");
 open my $txt_fh, '>', $txt_fn;
 print $txt_fh tsv('ID', 'Aligned Bases', 'Reference bases', '% Aligned Bases');
 
-msg("Patching covered bases into whole genome alignment...");
+msg("Loading pre-masked/aligned sequences...");
 my %aln;
 for my $id (@id) {
   if ($id eq $REF) {
     $aln{$REF} = { %refseq };
     next;
   }
-  my %tmp = (%gapseq); # blank gap template
-  my $count=0;
-  my $depth_fn = "$dir_of{$id}/$inprefix.depth.gz"; # samtools depth output
-  -r $depth_fn or err("Can not open: $depth_fn");
-  open my $depth_fh, '-|', "bgzip -c -d \Q$depth_fn\E";
-  while (<$depth_fh>) {
-    my($seqid, $pos, $cov) = split m/\t/;
-    my $new = $cov < $mincov ? 'N' : substr($refseq{$seqid}, $pos-1, 1);
-    substr $tmp{$seqid}, $pos-1, 1, $new; # patch AGTC/N into gap template
-#    $count++ if $new ne 'N';
-    if ($new ne 'N') {
-      $count++;
-      $snp->{$seqid}{$pos}{$id} ||= $new;
-    } 
+  my $fh = Bio::SeqIO->new(-file=>"$dir_of{$id}/$inprefix.aligned.fa", -format=>'fasta');
+  my $covered=0;
+  while (my $seq = $fh->next_seq) {
+    $aln{$id}{$seq->id} = $seq->seq;
+    $covered += $seq->seq =~ tr/AGTC/AGTC/; # count DNA
   }
-  $aln{$id} = { %tmp };
-  my $pc = sprintf "%.2f", $count*100/$reflen;
-  msg("$id coverage $count/$reflen = $pc%");
-  print $txt_fh tsv($id, $count, $reflen, $pc);
+  my $pc = sprintf "%.2f", $covered*100/$reflen;
+  msg("$id coverage $covered/$reflen = $pc%");
+  print $txt_fh tsv($id, $covered, $reflen, $pc);
 }
 
 msg("Patching variant sites into whole genome alignment...");
@@ -90,6 +80,7 @@ for my $seq (keys %$snp) {
   for my $pos (keys %{$snp->{$seq}}) {
     my $var = $snp->{$seq}{$pos};
     for my $id (keys %$var) {
+      # The SNP table was converted to solely 1 nuc SNPs
       substr $aln{$id}{$seq}, $pos-1, 1, $var->{$id};
     }
   }
@@ -119,13 +110,13 @@ for my $seq (sort keys %$snp) {
     $ncore++;
   }
 }
-msg("Found $ncore core SNPs from $nsites SNPs.");
+msg("Found $ncore core SNPs from $nsites variant sites.");
 msg("Saved SNP table: $table_fn");
 
 my $core_aln = save_hash_alignment(\%valn, "$prefix.aln", $aformat);
 
 if ($trees) {
-  msg("Constructing NJ tree from core variant sites.");
+  msg("Constructing NJ tree from core SNP sites.");
   my $stats = Bio::Align::DNAStatistics->new();
   my $matrix = $stats->distance(-method=>'Kimura', -align=>$core_aln);
   my $dfactory = Bio::Tree::DistanceFactory->new(-method=>'NJ');

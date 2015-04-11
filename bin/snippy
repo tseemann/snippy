@@ -14,7 +14,7 @@ use Bio::Tools::GFF;
 
 my $EXE = $FindBin::RealScript;
 my $BINDIR = $FindBin::RealBin;
-my $VERSION = "2.4";
+my $VERSION = "2.5";
 my $SYNOPSIS = "fast bacterial variant calling from NGS reads";
 my $AUTHOR = 'Torsten Seemann <torsten.seemann@gmail.com>';
 my $URL = 'https://github.com/Victorian-Bioinformatics-Consortium/snippy';
@@ -198,6 +198,9 @@ for my $cmd (@cmd) {
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # produce the depth-masked reference
+#   . start with a sequence full of "-"
+#   . if coverage < mindepth add "N"
+#   . else add "[AGTC]" as appropriate (*** but NOT the SNPS ***)
 
 my $afa_fn = "$prefix.aligned.fa";
 msg("Generating aligned/masked FASTA relative to reference: $afa_fn");
