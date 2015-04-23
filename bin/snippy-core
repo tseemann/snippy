@@ -65,7 +65,8 @@ for my $id (@id) {
     $aln{$REF} = { %refseq };
     next;
   }
-  my $fh = Bio::SeqIO->new(-file=>"$dir_of{$id}/$inprefix.aligned.fa", -format=>'fasta');
+  my $aln_file = find_file_with_ext($dir_of{$id}, 'aligned.fa');
+  my $fh = Bio::SeqIO->new(-file=>$aln_file, -format=>'fasta');
   my $covered=0;
   while (my $seq = $fh->next_seq) {
     $aln{$id}{$seq->id} = $seq->seq;
@@ -194,12 +195,25 @@ sub dir_to_id {
 
 #----------------------------------------------------------------------
 
+sub find_file_with_ext {
+  my($dir, $ext) = @_;
+  my $default = "$dir/$inprefix.$ext";
+  return $default if -r $default;
+  my($first) = glob("$dir/*.$ext");
+  $first or err("Could not find a .$ext file in $dir");
+  msg("Could not find default $default, using $first instead");
+  return $first;  
+}
+
+#----------------------------------------------------------------------
+
 sub add_snippy {
   my($id, $dir, $noref) = @_;
   -d $dir or err("Not a folder: $dir");
-  my $snp_file = "$dir/$inprefix.tab";
-  -r $snp_file or err("Could not find '$snp_file'. Not a Snippy folder or wrong --inprefix ?");
+#  my $snp_file = "$dir/$inprefix.tab";
+#  -r $snp_file or err("Could not find '$snp_file'. Not a Snippy folder or wrong --inprefix ?");
 #  msg("$id: using Snippy variant file: $snp_file");
+  my $snp_file = find_file_with_ext($dir, 'tab');
   open SNPS, '<', $snp_file;
   my $header = <SNPS>;
   $header =~ m/^CHROM/ or err("Unexpected header in $snp_file: $header");
@@ -253,7 +267,7 @@ sub setOptions {
     {OPT=>"help!",      VAR=>\&usage,                  DESC=>"This help"},
     {OPT=>"quiet!",     VAR=>\$quiet,     DEFAULT=>0 , DESC=>"No output to stderr"},
     {OPT=>"verbose!",   VAR=>\$verbose,   DEFAULT=>0 , DESC=>"Verbose output"},
-    {OPT=>"inprefix=s", VAR=>\$inprefix,  DEFAULT=>'snps' , DESC=>"Input prefix of Snippy files"},
+    {OPT=>"inprefix=s", VAR=>\$inprefix,  DEFAULT=>'snps' , DESC=>"Preferred input prefix of Snippy files"},
     {OPT=>"prefix=s",   VAR=>\$prefix,    DEFAULT=>'core' , DESC=>"Output file prefix"},
     {OPT=>"noref!",     VAR=>\$noref,     DEFAULT=>0 , DESC=>"Exclude reference"},
     {OPT=>"mincov=i",   VAR=>\$mincov,    DEFAULT=>10 , DESC=>"Minimum depth of coverage to consider core"},
