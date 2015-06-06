@@ -15,7 +15,7 @@ use Bio::SeqIO;
 
 my $REF = 'Reference';
 
-my(@Options, $quiet, $verbose, $inprefix, $noref, $mincov, $prefix, $aformat, $trees, $tformat);
+my(@Options, $quiet, $verbose, $inprefix, $noref, $mincov, $prefix, $aformat, $tformat);
 setOptions();
 
 my $anno;
@@ -133,29 +133,6 @@ msg("Found $ncore core SNPs from $nsites variant sites.");
 msg("Saved SNP table: $table_fn");
 
 my $core_aln = save_hash_alignment(\%valn, "$prefix.aln", $aformat);
-
-if ($trees) {
-  msg("Constructing NJ tree from core SNP sites.");
-  my $stats = Bio::Align::DNAStatistics->new();
-  my $matrix = $stats->distance(-method=>'Kimura', -align=>$core_aln);
-  my $dfactory = Bio::Tree::DistanceFactory->new(-method=>'NJ');
-  my $tree = $dfactory->make_tree($matrix);
-
-  my $tree_fn = "$prefix.tree";
-  msg("Saving Newick tree: $tree_fn");                   
-  my $treeout = Bio::TreeIO->new(-file=>">$tree_fn", -format=>$tformat);
-  $treeout->write_tree($tree);
-
-  my $cladogram_fn = "$prefix.tree.eps";
-  msg("Saving cladogram: $cladogram_fn");
-  my $cladogram = Bio::Tree::Draw::Cladogram->new(-tree=>$tree);
-  $cladogram->print(-file => $cladogram_fn);
-
-  my $svg_fn = "$prefix.tree.svg";
-  msg("Saving SVG tree: $svg_fn");
-  my $svg_out = Bio::TreeIO->new(-file=>">$svg_fn", -format=>'svggraph');
-  $svg_out->write_tree($tree);
-}
 
 msg("Done.");
 
@@ -278,8 +255,6 @@ sub setOptions {
     {OPT=>"noref!",     VAR=>\$noref,     DEFAULT=>0 , DESC=>"Exclude reference"},
     {OPT=>"mincov=i",   VAR=>\$mincov,    DEFAULT=>10 , DESC=>"Minimum depth of coverage to consider core"},
     {OPT=>"aformat=s",  VAR=>\$aformat,   DEFAULT=>'fasta' , DESC=>"Output alignment format: nexus fasta phylip maf clustalw ..."},
-    {OPT=>"trees!",     VAR=>\$trees,     DEFAULT=>0 , DESC=>"Produce Kimura-NJ tree + SVG and EPS"},
-    {OPT=>"tformat=s",  VAR=>\$tformat,   DEFAULT=>'newick' , DESC=>"Output tree format: newick nexus cluster nexml ..."},
   );
 
   (!@ARGV) && (usage());
