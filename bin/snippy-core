@@ -7,10 +7,6 @@ use File::Spec;
 use Bio::AlignIO;
 use Bio::LocatableSeq;
 use Data::Dumper;
-use Bio::Align::DNAStatistics;
-use Bio::Tree::DistanceFactory;
-use Bio::TreeIO;
-use Bio::Tree::Draw::Cladogram;
 use Bio::SeqIO;
 
 my $REF = 'Reference';
