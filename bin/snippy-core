@@ -20,6 +20,7 @@ setOptions();
 
 my $anno;
 my $snp;
+my $allsnp;
 my %dir_of;
 my %refseq;
 my %gapseq;
@@ -106,6 +107,10 @@ my $table_fn = "$prefix.tab";
 open TABLE, '>', $table_fn;
 print TABLE tsv('CHR','POS',@id,'LOCUS_TAG','GENE','PRODUCT');
 
+my $nway_fn = "$prefix.nway.tab";
+open NWAY, '>', $nway_fn;
+print NWAY tsv('CHR','POS',@id,'LOCUS_TAG','GENE','PRODUCT');
+
 msg("Writing core SNP table");
 my $nsites = 0;
 my $ncore = 0;
@@ -114,8 +119,9 @@ for my $seq (sort keys %$snp) {
   for my $pos (sort { $a <=> $b } keys %{$snp->{$seq}}) {
     my $var = $snp->{$seq}{$pos};
     $nsites++;
-    next unless $N == scalar(keys %$var);     # core?
     my @var = map { $var->{$_} } @id;
+    print NWAY tsv($seq, $pos, @var, @{$anno->{$seq}{$pos}});
+    next unless $N == scalar(keys %$var);     # core?
     next if not (any { $_ ne $var[0] } @var); # monomorphic?
     msg("$seq:$pos @var") if $verbose;
     map { $valn{$_} .= $var->{$_} } @id;       # append
