@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use FindBin;
+use List::Util qw(min max);
 use Time::Piece;
 use Time::Seconds;
 use File::Path qw(make_path remove_tree);
@@ -20,6 +21,7 @@ my $AUTHOR = 'Torsten Seemann <torsten.seemann@gmail.com>';
 my $URL = 'https://github.com/tseemann/snippy';
 my $OPSYS = $^O;
 my $t0 = localtime;
+my $MIN_FREEBAYES_CHUNK_SIZE = 1000;
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # command line options
@@ -146,7 +148,7 @@ msg("Wrote $nfeat features to ref.gff");
 
 my $refsize = -s "$refdir/ref.fa";  # rough size in bases
 my $num_chunks = $cpus * 4; # oversample by 4 for run-time variation
-my $chunk_size = int( $refsize / $num_chunks ); # bases per chunk
+my $chunk_size = min( $MIN_FREEBAYES_CHUNK_SIZE, int( $refsize / $num_chunks ) ); # bases per chunk
 msg("Freebayes will process $num_chunks chunks of $chunk_size bp, $cpus chunks at a time.");
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
