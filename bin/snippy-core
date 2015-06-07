@@ -3,6 +3,7 @@ use warnings;
 use strict;
 use Time::Piece;
 use List::Util qw(any);
+use List::MoreUtils qw(uniq);
 use File::Spec;
 use Bio::AlignIO;
 use Bio::LocatableSeq;
@@ -22,6 +23,7 @@ my %refseq;
 my %gapseq;
 my $reflen;
 
+msg("Loading Snippy folders");
 for my $dir (@ARGV) {
   my $id = dir_to_id($dir);
   exists $dir_of{$id} and err("ID '$id' already exists.");
@@ -40,7 +42,7 @@ for my $dir (@ARGV) {
 }
 
 my @id = sort keys %dir_of;
-my %progress = map { ( $id[$_] => $_.'/'.scalar(@id) ) } (0 .. $#id);
+my %progress = map { ( $id[$_] => ($_+1).'/'.scalar(@id) ) } (0 .. $#id);
 my $N = scalar(@id);
 msg("Loaded $N SNP tables.");
 
@@ -63,7 +65,7 @@ for my $id (@id) {
     next;
   }
   my $aln_file = find_file_with_ext($dir_of{$id}, 'aligned.fa');
-  my $fh = Bio::SeqIO->new(-file=>$aln_file, -format=>'fasta');
+  my $fh = Bio::SeqIO->new(-file=>$aln_file, -format=>'fasta', -alphabet=>'dna');
   my $covered=0;
   while (my $seq = $fh->next_seq) {
     $aln{$id}{$seq->id} = $seq->seq;
@@ -107,6 +109,13 @@ my $nway_fn = "$prefix.nway.tab";
 open NWAY, '>', $nway_fn;
 print NWAY tsv('CHR','POS',@id,'LOCUS_TAG','GENE','PRODUCT');
 
+my $vcf_fn = "$prefix.vcf";
+open VCF, '>', $vcf_fn;
+print VCF "##fileformat=VCFv4.1\n";
+print VCF qq{##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n};
+print VCF qq{##INFO=<ID=TYPE,Number=A,Type=String,Description="The type of allele.">\n};
+print VCF tsv('#CHROM', qw(POS ID REF ALT QUAL FILTER INFO FORMAT), @id);
+
 msg("Writing core SNP table");
 my $nsites = 0;
 my $ncore = 0;
@@ -119,10 +128,18 @@ for my $seq (sort keys %$snp) {
     print NWAY tsv($seq, $pos, @var, @{$anno->{$seq}{$pos}});
     next unless $N == scalar(keys %$var);     # core?
     next if not (any { $_ ne $var[0] } @var); # monomorphic?
+    $ncore++;
     msg("$seq:$pos @var") if $verbose;
     map { $valn{$_} .= $var->{$_} } @id;       # append
     print TABLE tsv($seq, $pos, @var, @{$anno->{$seq}{$pos}});
-    $ncore++;
+    # multi-sample VCF
+    my @allele = uniq(@var);
+    my %GT_of = ( map { ($allele[$_] => $_) } (0 .. @allele-1) );
+    print VCF tsv($seq, $pos, '.', 
+                  $allele[0], join(',', @allele[1..$#allele]), 
+                  '9999.00', '.', "TYPE=snp", "GT", 
+                  (map { $GT_of{$_} } @var),
+               );
   }
 }
 msg("Found $ncore core SNPs from $nsites variant sites.");
@@ -206,14 +223,15 @@ sub add_snippy {
     # 0:SEQ 1:POS 2:TYPE 3:REF 4:ALT 
     # 5:EVID 6:FTYPE 7:STRAND 8:NT 9:AA 
     # 10:LOCUS 11:GENE 12:PRODUCT
-    next unless $type eq 'snp' or $type eq 'mnp'; # no complex,ins,del
+#    next unless $type eq 'snp' or $type eq 'mnp'; # no complex,ins,del
     next unless length($ref) eq length($alt);     # double check REF / ALT
-    for my $offset (0 .. length($alt) - 1) {      # handle MNP (>1 pos)
+    # if ($type eq 'complex') {  print "$type $ref $alt\n"; }
+    for my $offset (0 .. length($alt) - 1) {      # handle multi-SNPs
       $snp->{$seq}{$pos+$offset}{$id}  = substr($alt,$offset,1);
       $snp->{$seq}{$pos+$offset}{$REF} = substr($ref,$offset,1) unless $noref;
       $len++;
+      $anno->{$seq}{$pos} = [ $ltag, $gene, $prod ]; # save annotation for TABLE
     }
-    $anno->{$seq}{$pos} = [ $ltag, $gene, $prod ]; # save annotation for TABLE
     $num++;
   }
   close SNPS;
