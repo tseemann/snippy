@@ -5,12 +5,18 @@ Rapid haploid variant calling and core SNP phylogeny
 Torsten Seemann (@torstenseemann)
 
 ##Synopsis
-Snippy finds SNPs between a haploid reference genome and your NGS sequence reads. It will find both substitutions (snps) and insertions/deletions (indels). It will use as many CPUs as you can give it on a single computer (tested to 64 cores). It is designed with speed in mind, and produces a consistent set of output files in a single folder.
-It can then take a set of Snippy results using the same reference and generate a core SNP alignment and tree.
+
+Snippy finds SNPs between a haploid reference genome and your NGS sequence
+reads.  It will find both substitutions (snps) and insertions/deletions
+(indels).  It will use as many CPUs as you can give it on a single computer
+(tested to 64 cores).  It is designed with speed in mind, and produces a
+consistent set of output files in a single folder.  It can then take a set
+of Snippy results using the same reference and generate a core SNP alignment
+(and ultimately a phylogenomic tree).
 
 ##Quick Start
 ```
-% snippy --cpus 16 --outdir mysnps --ref EHEC.gbk --R1 FDA_R1.fastq.gz --R1 FDA_R2.fastq.gz
+% snippy --cpus 16 --outdir mysnps --ref Listeria.gbk --R1 FDA_R1.fastq.gz --R1 FDA_R2.fastq.gz
 <cut>
 Walltime used: 3 min, 42 sec
 Results folder: mysnps
@@ -29,12 +35,12 @@ chr    100541  del     CAAA  CAA    CAA:38 CAAA:1   CDS   +                    E
 plas      619  complex GATC  AATA   GATC:28 AATA:0  
 plas     3221  mnp     GA    CT     CT:39 CT:0      CDS   +                    ECO_p012  rep  hypothetical protein
 
-% snippy-core --prefix core --trees mysnps1 mysnps2 mysnps3 mysnps4 
+% snippy-core --prefix core mysnps1 mysnps2 mysnps3 mysnps4 
 Loaded 4 SNP tables.
 Found 2814 core SNPs from 96615 SNPs.
 
 % ls core.*
-core.aln core.tab core.tree core.tree.eps core.tree.svg
+core.aln core.tab core.txt
 ```
 
 #Installation
@@ -125,7 +131,13 @@ By default Snippy uses ```--mincov 10 --minfrac 0.9``` which is reasonable for m
 
 #Core SNP phylogeny
 
-If you call SNPs for multiple isolates from the same reference, you can produce an alignment of "core SNPs" which can be used to build a high-resolution phylogeny (ignoring possible recombination). A "core site" is a genomic position that is present in _all_ the samples. A core site can have the same nucleotide in every sample ("monomorphic") or some samples can be different ("polymorphic" or "variant"). If we ignore the complications of "ins", "del" and "complex" variant types, and just use "snp" and "mnp" sites variant sites, these are the "core SNP genome".
+If you call SNPs for multiple isolates from the same reference, you can
+produce an alignment of "core SNPs" which can be used to build a
+high-resolution phylogeny (ignoring possible recombination).  A "core site"
+is a genomic position that is present in _all_ the samples.  A core site can
+have the same nucleotide in every sample ("monomorphic") or some samples can
+be different ("polymorphic" or "variant").  If we ignore the complications
+of "ins", "del" variant types, and just use variant sites, these are the "core SNP genome".
 
 ##Input Requirements
 * a set of Snippy folders which used the same ``--ref`` sequence.
@@ -137,15 +149,6 @@ Extension | Description
 .aln | A core SNP alignment in the ```--aformat``` format (default FASTA)
 .tab | Tab-separated columnar list of core SNP sites with alleles and annotations
 .txt | Tab-separated columnar list of alignment/core-size statistics
-
-If you also use the ```--trees``` option, you will get some quick and dirty tree files and pictures. 
-The .tree is a Kimura NJ tree.
-
-Extension | Description
-----------|--------------
-.tree | A phylogenetic tree in the ```--tformat``` format (default NEWICK)
-.tree.eps | An EPS image of the .tree file
-.tree.svg | An SVG image of the .tree file
 
 #Information
 
