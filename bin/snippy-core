@@ -223,14 +223,15 @@ sub add_snippy {
     # 0:SEQ 1:POS 2:TYPE 3:REF 4:ALT 
     # 5:EVID 6:FTYPE 7:STRAND 8:NT 9:AA 
     # 10:LOCUS 11:GENE 12:PRODUCT
-#    next unless $type eq 'snp' or $type eq 'mnp'; # no complex,ins,del
+# next unless $type eq 'snp' or $type eq 'mnp'; # no complex,ins,del
     next unless length($ref) eq length($alt);     # double check REF / ALT
     # if ($type eq 'complex') {  print "$type $ref $alt\n"; }
+    msg("$type\t$ref\t$alt") if $verbose;
     for my $offset (0 .. length($alt) - 1) {      # handle multi-SNPs
       $snp->{$seq}{$pos+$offset}{$id}  = substr($alt,$offset,1);
       $snp->{$seq}{$pos+$offset}{$REF} = substr($ref,$offset,1) unless $noref;
       $len++;
-      $anno->{$seq}{$pos} = [ $ltag, $gene, $prod ]; # save annotation for TABLE
+      $anno->{$seq}{$pos+$offset} = [ $ltag, $gene, $prod ]; # save annotation for TABLE
     }
     $num++;
   }
