@@ -15,7 +15,7 @@ use Bio::Tools::GFF;
 
 my $EXE = $FindBin::RealScript;
 my $BINDIR = $FindBin::RealBin;
-my $VERSION = "2.6";
+my $VERSION = "2.7-dev";
 my $SYNOPSIS = "fast bacterial variant calling from NGS reads";
 my $AUTHOR = 'Torsten Seemann <torsten.seemann@gmail.com>';
 my $URL = 'https://github.com/tseemann/snippy';
