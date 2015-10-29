@@ -80,11 +80,20 @@ while (<VCF>) {
     }
 
     # convert snpEff result into something readable!
-    my @eff = split m/\|/, $tag->{ANN} || '';
-    $anno{NT_POS} = $eff[11];
-    $anno{AA_POS} = $eff[13];
-    $anno{EFFECT} = join(' ', @eff[1,9,10] );
+    if ($tag->{ANN}) {
+      my @eff = split m/\|/, $tag->{ANN};
+      $anno{NT_POS} = $eff[11];
+      $anno{AA_POS} = $eff[13];
+      $anno{EFFECT} = join(' ', @eff[1,9,10] );
+    }
+    else {
+      $anno{EFFECT} = "variant did not have ANN annotation";
+    }
   }
+  else {
+    $anno{EFFECT} = "reference was not annotated";
+  }
+  
   my @evid;
   # freebayes VCF seems to use different tags when TYPE=indel ...
   my $RO = $tag->{RO} || '0';

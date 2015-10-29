@@ -148,17 +148,19 @@ msg("Wrote $nfeat features to ref.gff");
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # create config for snpEff
 
-my $cfg_fn = "$refdir/snpeff.config";
-msg("Creating $cfg_fn");
-copy("$BINDIR/../etc/snpeff.config", $cfg_fn);
-open my $cfg, '>>', $cfg_fn;
-print $cfg "ref.genome : Snippy Reference\n";
-my @id = keys %refseq;
-print $cfg "\tref.chromosome : ", join(", ", @id), "\n";
-for my $id (@id) {
-  print $cfg "\tref.$id.codonTable : Bacterial_and_Plant_Plastid\n";
+if ($nfeat > 0) {
+  my $cfg_fn = "$refdir/snpeff.config";
+  msg("Creating $cfg_fn");
+  copy("$BINDIR/../etc/snpeff.config", $cfg_fn);
+  open my $cfg, '>>', $cfg_fn;
+  print $cfg "ref.genome : Snippy Reference\n";
+  my @id = keys %refseq;
+  print $cfg "\tref.chromosome : ", join(", ", @id), "\n";
+  for my $id (@id) {
+    print $cfg "\tref.$id.codonTable : Bacterial_and_Plant_Plastid\n";
+  }
+  close $cfg;
 }
-close $cfg;
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # divide the reference into chunks to parallel freebayes processing
@@ -187,8 +189,9 @@ my @cmd = (
   "samtools faidx $refdir/ref.fa",
   "bwa index $refdir/ref.fa",
   "mkdir $refdir/genomes && cp -f $refdir/ref.fa $refdir/genomes/ref.fa",
-  "mkdir $refdir/ref && bgzip -c $refdir/ref.gff >  $refdir/ref/genes.gff.gz",
-  "snpEff build -c $refdir/snpeff.config -dataDir . -gff3 ref",
+  "mkdir $refdir/ref && bgzip -c $refdir/ref.gff > $refdir/ref/genes.gff.gz",
+  ( $nfeat > 0 ? "snpEff build -c $refdir/snpeff.config -dataDir . -gff3 ref" 
+               : () ),
   "(bwa mem $bwaopt -t $cpus $refdir/ref.fa @reads"
     ." | samtools view -@ $cpus -q $mapqual -F 3844 -S -b -u -T ref.fa -"
     ." | samtools sort -@ $cpus - $prefix)",
@@ -198,7 +201,8 @@ my @cmd = (
   "fasta_generate_regions.py $refdir/ref.fa.fai $chunk_size > $refdir/ref.txt",
   "freebayes-parallel $refdir/ref.txt $cpus $fbopt -f $refdir/ref.fa $prefix.bam > $prefix.raw.vcf",
   "vcffilter -f 'DP > $mincov2' -f 'QUAL > 10' $prefix.raw.vcf > $prefix.filt.vcf",
-  "snpEff ann -no-downstream -no-upstream -no-intergenic -no-utr -c $refdir/snpeff.config -dataDir . -noStats ref $prefix.filt.vcf > $prefix.vcf",
+  ( $nfeat > 0 ? "snpEff ann -no-downstream -no-upstream -no-intergenic -no-utr -c $refdir/snpeff.config -dataDir . -noStats ref $prefix.filt.vcf > $prefix.vcf" 
+               : "cp $prefix.filt.vcf $prefix.vcf" ),
   "bgzip -c $prefix.vcf > $prefix.vcf.gz",
   "tabix -p vcf $prefix.vcf.gz",
   "$BINDIR/snippy-vcf_to_tab --gff $refdir/ref.gff --ref $refdir/ref.fa --vcf $prefix.vcf > $prefix.tab",
