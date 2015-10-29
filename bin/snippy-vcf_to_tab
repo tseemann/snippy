@@ -52,7 +52,7 @@ if ($gff) {
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Create a SNP table file
 
-my @ANNO = qw(FTYPE STRAND NT_POS AA_POS LOCUS_TAG GENE PRODUCT EFFECT);
+my @ANNO = qw(FTYPE STRAND NT_POS AA_POS EFFECT LOCUS_TAG GENE PRODUCT);
 my $count=0;
 print join("\t", qw(CHROM POS TYPE REF ALT EVIDENCE), @ANNO), "\n";
 
@@ -89,9 +89,6 @@ while (<VCF>) {
     else {
       $anno{EFFECT} = "variant did not have ANN annotation";
     }
-  }
-  else {
-    $anno{EFFECT} = "reference was not annotated";
   }
   
   my @evid;
