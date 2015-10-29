@@ -52,7 +52,7 @@ if ($gff) {
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Create a SNP table file
 
-my @ANNO = qw(FTYPE STRAND NT_POS AA_POS LOCUS_TAG GENE PRODUCT);
+my @ANNO = qw(FTYPE STRAND NT_POS AA_POS LOCUS_TAG GENE PRODUCT EFFECT);
 my $count=0;
 print join("\t", qw(CHROM POS TYPE REF ALT EVIDENCE), @ANNO), "\n";
 
@@ -75,16 +75,15 @@ while (<VCF>) {
     my $f = $feat{$aff_featid};
     $anno{FTYPE} = $f->primary_tag;
     $anno{STRAND} = $f->strand < 0 ? '-' : $f->strand > 0 ? '+' : '.';
-    $anno{NT_POS} = $pos - $f->start + 1;
-    $anno{NT_POS} = $f->length - $anno{NT_POS} + 1 if $f->strand < 0;
-    for my $tag (@ANNO) {
-      $anno{$tag} = ($f->get_tag_values(lc($tag)))[0] if $f->has_tag(lc($tag));
+    for my $t (@ANNO) {
+      $anno{$t} = ($f->get_tag_values(lc($t)))[0] if $f->has_tag(lc($t));
     }
-    if ($f->primary_tag eq 'CDS') {
-      $anno{AA_POS} = int( ($anno{NT_POS}+1.5) / 3 );
-    }
-    $anno{NT_POS} .= "/".$f->length;
-    $anno{AA_POS} .= "/".int($f->length/3);
+
+    # convert snpEff result into something readable!
+    my @eff = split m/\|/, $tag->{ANN} || '';
+    $anno{NT_POS} = $eff[11];
+    $anno{AA_POS} = $eff[13];
+    $anno{EFFECT} = join(' ', @eff[1,9,10] );
   }
   my @evid;
   # freebayes VCF seems to use different tags when TYPE=indel ...
@@ -92,7 +91,6 @@ while (<VCF>) {
   my $AO = $tag->{AO} || '0';  
   push @evid, "$alt_base:$AO", "$ref_base:$RO";
   my $evid = join(' ', @evid);
-
 
   print join("\t", 
     $chr, $pos, $tag->{TYPE}, $ref_base, $alt_base, $evid, (map { $anno{$_} } @ANNO)

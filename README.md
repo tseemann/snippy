@@ -23,12 +23,12 @@ Results folder: mysnps
 Done.
 
 % ls mysnps
-snps.vcf snps.bed snps.gff snps.csv snps.tab snps.html
+snps.vcf snps.bed snps.gff snps.csv snps.tab snps.html 
 snps.bam snps.txt reference/ ...
 
 % head -5 mysnps/snps.tab
-CHROM  POS     TYPE    REF   ALT    EVIDENCE        FTYPE STRAND NT_POS AA_POS LOCUS_TAG GENE PRODUCT
-chr      5958  snp     A     G      G:44 A:0        CDS   +      41/600 13/200 ECO_0001  dnaA replication protein DnaA
+CHROM  POS     TYPE    REF   ALT    EVIDENCE        FTYPE STRAND NT_POS AA_POS LOCUS_TAG GENE PRODUCT EFFECT
+chr      5958  snp     A     G      G:44 A:0        CDS   +      41/600 13/200 ECO_0001  dnaA replication protein DnaA missense_variant c.548A>C p.Lys183Thr
 chr     35524  snp     G     T      T:73 G:1 C:1    tRNA  -   
 chr     45722  ins     ATT   ATTT   ATTT:43 ATT:1   CDS   -                    ECO_0045  gyrA DNA gyrase
 chr    100541  del     CAAA  CAA    CAA:38 CAAA:1   CDS   +                    ECO_0179      hypothetical protein
@@ -75,7 +75,7 @@ Extension | Description
 .tab | A simple [tab-separated](http://en.wikipedia.org/wiki/Tab-separated_values) summary of all the variants
 .csv | A [comma-separated](http://en.wikipedia.org/wiki/Comma-separated_values) version of the .tab file
 .html | A [HTML](http://en.wikipedia.org/wiki/HTML) version of the .tab file
-.vcf | The variants in [VCF](http://en.wikipedia.org/wiki/Variant_Call_Format) format
+.vcf | The final annotated variants in [VCF](http://en.wikipedia.org/wiki/Variant_Call_Format) format
 .vcf.gz | Compressed .vcf file via [BGZIP](http://blastedbio.blogspot.com.au/2011/11/bgzf-blocked-bigger-better-gzip.html) 
 .vcf.gz.tbi | Index for the .vcf.gz via [TABIX](http://bioinformatics.oxfordjournals.org/content/27/5/718.full)
 .bed | The variants in [BED](http://genome.ucsc.edu/FAQ/FAQformat.html#format1) format
@@ -83,6 +83,7 @@ Extension | Description
 .bam | The alignments in [BAM](http://en.wikipedia.org/wiki/SAMtools) format. Note that multi-mapping and unmapped reads are not present.
 .bam.bai | Index for the .bam file
 .raw.vcf | The unfiltered variant calls from Freebayes
+.filt.vcf | The filtered variant calls from Freebayes
 .log | A log file with the commands run and their outputs
 .consensus.fa | A version of the reference genome with all variants instantiated
 .aligned.fa | A version of the reference but with - for unaligned and N for depth < --minfrac (**does not have variants**)
@@ -111,6 +112,7 @@ AA_POS | Residue position / Length in aa (only if FTYPE is CDS)
 LOCUS_TAG | The ```/locus_tag``` of the feature (if it existed)
 GENE | The ```/gene``` tag of the feature (if it existed)
 PRODUCT | The ```/product``` tag of the feature (if it existed)
+EFFECT | The ```snpEff``` annotated consequence of this variant
 
 ##Variant Types
 
@@ -171,7 +173,8 @@ Please submit suggestions and bug reports here: https://github.com/tseemann/snip
 * freebayes sripts (freebayes-parallel, fasta_generate_regions.py)
 * vcflib (vcffilter, vcfstreamsort, vcfuniq, vcffirstheader)
 * vcftools (vcf-consensus)
+* snpEff >= 4.1
 
 ##Bundled binaries
-For a modern Linux system (Ubuntu >= 12.04) and Mac OS X all the binaries and scripts are included. 
+For a modern Linux system (Ubuntu >= 12.04) and Mac OS X all the binaries, JARs and scripts are included. 
 

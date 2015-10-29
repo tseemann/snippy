@@ -1,0 +1,50 @@
+#!/bin/bash
+
+#---------------------------------------------------------------------------------------------------
+#
+# Wrapper for HomeBrew-science project 
+#
+# snpEff executable shell script
+# http://snpeff.sourceforge.net/
+# Extracts memory and system property Java arguments from the list of provided arguments
+# (ie -Xms 1g -Xmx 4g)
+#
+# Source https://gist.github.com/chapmanb/8732049
+# Created by: Brad Chapman
+#---------------------------------------------------------------------------------------------------
+
+jardir=$(dirname $0)
+
+java=java
+if [ -e "$JAVA_HOME/bin/java" ]
+then
+java="$JAVA_HOME/bin/java"
+fi
+
+default_jvm_mem_opts="-Xms1g -Xmx4g"
+jvm_mem_opts=""
+jvm_prop_opts=""
+pass_args=""
+for arg in "$@"; do
+    case $arg in
+        '-D'*)
+            jvm_prop_opts="$jvm_prop_opts $arg"
+            ;;
+         '-Xm'*)
+            jvm_mem_opts="$jvm_mem_opts $arg"
+            ;;
+         *)
+            pass_args="$pass_args $arg"
+            ;;
+    esac
+done
+
+if [ "$jvm_mem_opts" == "" ]; then
+    jvm_mem_opts="$default_jvm_mem_opts"
+fi
+if [[ "$pass_args" != "" && ! "$pass_args" =~ "-c " ]]; then
+    pass_args="$pass_args -c /bio/linuxbrew/Cellar/snpeff/4.1l/share/snpeff/snpEff.config"
+fi
+
+exec $java $jvm_mem_opts $jvm_prop_opts -jar ${jardir}/snpEff.jar $pass_args
+exit
