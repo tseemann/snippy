@@ -203,6 +203,10 @@ my @cmd = (
   "tabix -p vcf $prefix.vcf.gz",
   "$BINDIR/snippy-vcf_to_tab --gff $refdir/ref.gff --ref $refdir/ref.fa --vcf $prefix.vcf > $prefix.tab",
   "vcf-consensus $prefix.vcf.gz < $refdir/ref.fa > $prefix.consensus.fa",
+  "vcffilter -f 'TYPE = snp' --or -f 'TYPE = mnp' $prefix.filt.vcf > $prefix.filt.subs.vcf",
+  "bgzip -c $prefix.filt.subs.vcf > $prefix.filt.subs.vcf.gz",
+  "tabix -p vcf $prefix.filt.subs.vcf.gz",
+  "vcf-consensus $prefix.filt.subs.vcf.gz < $refdir/ref.fa > $prefix.consensus.subs.fa",
 );
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
