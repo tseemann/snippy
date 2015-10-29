@@ -127,6 +127,7 @@ my $nseq = 0;
 my $nfeat = 0;
 my %refseq;
 while (my $seq = $in->next_seq) {
+  exists $refseq{$seq->id} and err("Duplicate sequence ".$seq->id." in $reference");
   $refseq{ $seq->id } = uc($seq->seq); # keep for masking later
   $out->write_seq($seq);
   $nseq++;
