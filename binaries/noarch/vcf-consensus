@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Carp;
 use FindBin;
-use lib "$FindBin::Bin/";
+use lib "$FindBin::Bin/../../perl5";
 use Vcf;
 
 my $opts = parse_params();

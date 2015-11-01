@@ -56,8 +56,8 @@ $ENV{PATH} = "$BINDIR:"
 
 for my $exe (qw(bwa samtools tabix bgzip snpEff java
                 parallel freebayes freebayes-parallel fasta_generate_regions.py 
-                vcffilter vcfstreamsort vcfuniq vcffirstheader vcf-consensus
-                snippy-vcf_to_tab snippy-vcf_report)) {
+                vcfstreamsort vcfuniq vcffirstheader vcf-consensus
+                snippy-vcf_to_tab snippy-vcf_report snippy-vcf_filter)) {
   my($which) = qx(which $exe 2> /dev/null);
   $which or err("Can not find required '$exe' in PATH");
   chomp $which;
@@ -179,10 +179,7 @@ msg("Using BAM RG (Read Group) ID: $rgid");
 $bwaopt .= qq{ -v 2 -M -R '\@RG\tID:$rgid\tSM:$rgid'};
 $bwaopt .= ' -p' if $peil;
 
-#my $fbopt = "-p 1 -q 20 -m $mapqual -F $minfrac -C $mincov -V";
-my $fbopt = "-p 1 -q 20 -m $mapqual -C $mincov -V";
-my $min_DP = $mincov-1;
-my $min_AO = int($minfrac * $mincov)-1;
+my $fbopt = "-p 1 -q 20 -m $mapqual --min-coverage $mincov -V";
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # prepare the commands
@@ -202,14 +199,16 @@ my @cmd = (
   "tabix -s 1 -b 2 -e 2 $prefix.depth.gz",
   "fasta_generate_regions.py $refdir/ref.fa.fai $chunk_size > $refdir/ref.txt",
   "freebayes-parallel $refdir/ref.txt $cpus $fbopt -f $refdir/ref.fa $prefix.bam > $prefix.raw.vcf",
-  "vcffilter -f 'DP > $min_DP' -g 'AO > $min_AO' -f 'QUAL > 10' $prefix.raw.vcf > $prefix.filt.vcf",
+#  "vcffilter -f 'DP > $min_DP' -f 'QUAL > 10' $prefix.raw.vcf > $prefix.filt.vcf",
+  "$BINDIR/snippy-vcf_filter --minqual 10 --mincov $mincov --minfrac $minfrac  $prefix.raw.vcf > $prefix.filt.vcf",
   ( $nfeat > 0 ? "snpEff ann -no-downstream -no-upstream -no-intergenic -no-utr -c $refdir/snpeff.config -dataDir . -noStats ref $prefix.filt.vcf > $prefix.vcf" 
                : "cp $prefix.filt.vcf $prefix.vcf" ),
   "bgzip -c $prefix.vcf > $prefix.vcf.gz",
   "tabix -p vcf $prefix.vcf.gz",
   "$BINDIR/snippy-vcf_to_tab --gff $refdir/ref.gff --ref $refdir/ref.fa --vcf $prefix.vcf > $prefix.tab",
   "vcf-consensus $prefix.vcf.gz < $refdir/ref.fa > $prefix.consensus.fa",
-  "vcffilter -f 'TYPE = snp' --or -f 'TYPE = mnp' $prefix.filt.vcf > $prefix.filt.subs.vcf",
+#  "vcffilter -f 'TYPE = snp' --or -f 'TYPE = mnp' $prefix.filt.vcf > $prefix.filt.subs.vcf",
+  "$BINDIR/snippy-vcf_filter --subs $prefix.filt.vcf > $prefix.filt.subs.vcf",
   "bgzip -c $prefix.filt.subs.vcf > $prefix.filt.subs.vcf.gz",
   "tabix -p vcf $prefix.filt.subs.vcf.gz",
   "vcf-consensus $prefix.filt.subs.vcf.gz < $refdir/ref.fa > $prefix.consensus.subs.fa",

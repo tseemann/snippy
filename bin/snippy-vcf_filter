@@ -1,0 +1,87 @@
+#!/usr/bin/env perl
+use warnings;
+use strict;
+use Data::Dumper;
+use FindBin;
+use lib "$FindBin::RealBin/../perl5";
+use Vcf;
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# Command line checking
+
+my @CMDLINE = @ARGV;
+my(@Options, $debug, $mincov, $minfrac, $minqual, $types, $subs);
+setOptions();
+
+my $total=0;
+my $passed=0;
+my %type;
+
+printf STDERR "Parsing: %s\n", $ARGV[0] || 'VCF';
+my $in = Vcf->new(fh=>\*ARGV);
+$in->parse_header;
+
+$in->add_header_line( {key=>'filter',value=>"$0 @CMDLINE"} );
+print $in->format_header;
+
+while (my $line = $in->next_line) {
+  print STDERR $line if $debug;
+  $total++;
+  my $x = $in->next_data_hash($line);
+  print STDERR Dumper($x) if $debug;
+  next unless $x->{QUAL} >= $minqual;
+  my $DP = $x->{INFO}{DP};
+  next unless $DP >= $mincov;
+  next unless $x->{INFO}{AO} / $DP >= $minfrac;
+  next if $types and $x->{INFO}{TYPE} !~ m/$types/;
+  next if $subs and length( $x->{REF} ) != length( $x->{ALT}->[0] );
+  print $line;
+  $type{ $x->{INFO}{TYPE} }++;
+  $passed++;
+}
+
+$in->close;
+
+print STDERR "Types:", (map { " $_=".$type{$_} } keys %type), "\n";
+printf STDERR "Passed %d/%d variants (%.2f%%)\n", $passed, $total, 100*$passed/$total;
+
+#----------------------------------------------------------------------
+# Option setting routines
+
+sub setOptions {
+  use Getopt::Long;
+
+  @Options = (
+    {OPT=>"help!",     VAR=>\&usage,                  DESC=>"This help"},
+    {OPT=>"debug!",    VAR=>\$debug,   DEFAULT=>0,    DESC=>"Output verbose debug info"},
+    {OPT=>"mincov=f",  VAR=>\$mincov,  DEFAULT=>10,   DESC=>"Minimum depth (DP)"},
+    {OPT=>"minfrac=f", VAR=>\$minfrac, DEFAULT=>0.9,  DESC=>"Minumum alternate fraction (AO/DP)"},
+    {OPT=>"minqual=f", VAR=>\$minqual, DEFAULT=>10,   DESC=>"Minimum quality (QUAL)"},
+    {OPT=>"types=s",   VAR=>\$types,   DEFAULT=>'',   DESC=>"Types eg. 'snp|mnp' '!(complex)'"},
+    {OPT=>"subs!",     VAR=>\$subs,    DEFAULT=>'',   DESC=>"Only keep equal length alleles: snp, mnp, some complex"},
+  );
+
+  (!@ARGV) && (usage());
+
+  &GetOptions(map {$_->{OPT}, $_->{VAR}} @Options) || usage();
+
+  # Now setup default values.
+  foreach (@Options) {
+    if (defined($_->{DEFAULT}) && !defined(${$_->{VAR}})) {
+      ${$_->{VAR}} = $_->{DEFAULT};
+    }
+  }
+}
+
+sub usage {
+  print STDERR "Synopsis:\n  Filter a Freebayes haploid VCF\n";
+  print STDERR "Usage:\n  $0 [options] old.vcf > new.vcf\n";
+  print STDERR "Options:\n";
+  foreach (@Options) {
+    printf STDERR "  --%-13s %s%s.\n",$_->{OPT},$_->{DESC},
+                  defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";
+  }
+  exit(1);
+}
+ 
+#----------------------------------------------------------------------
