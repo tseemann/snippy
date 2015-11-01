@@ -16,7 +16,7 @@ use Bio::Tools::GFF;
 
 my $EXE = $FindBin::RealScript;
 my $BINDIR = $FindBin::RealBin;
-my $VERSION = "2.8";
+my $VERSION = "2.9-dev";
 my $SYNOPSIS = "fast bacterial variant calling from NGS reads";
 my $AUTHOR = 'Torsten Seemann <torsten.seemann@gmail.com>';
 my $URL = 'https://github.com/tseemann/snippy';
@@ -29,7 +29,7 @@ my $MIN_FREEBAYES_CHUNK_SIZE = 1000;
 
 my(@Options, $quiet, $force, $outdir, $prefix, 
              $reference, $cpus, 
-             $pe1, $pe2, $se, $peil,
+             $pe1, $pe2, $se, $peil, $unmapped,
              $report, $mapqual, $mincov, $minfrac, $rgid, $bwaopt,
              $cleanup);
 setOptions();
@@ -54,7 +54,7 @@ $ENV{PATH} = "$BINDIR:"
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # check for needed exes
 
-for my $exe (qw(bwa samtools tabix bgzip snpEff java
+for my $exe (qw(bwa samtools tabix bgzip snpEff java gzip
                 parallel freebayes freebayes-parallel fasta_generate_regions.py 
                 vcfstreamsort vcfuniq vcffirstheader vcf-consensus
                 snippy-vcf_to_tab snippy-vcf_report snippy-vcf_filter)) {
@@ -181,6 +181,9 @@ $bwaopt .= ' -p' if $peil;
 
 my $fbopt = "-p 1 -q 20 -m $mapqual --min-coverage $mincov -V";
 
+# if we don't want unmapped reads, be ruthless and discard anything remotely  unuseful
+my $stv_opt = $unmapped ? "" : "-F 3844 -q $mapqual";
+
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # prepare the commands
 
@@ -192,7 +195,7 @@ my @cmd = (
   ( $nfeat > 0 ? "snpEff build -c $refdir/snpeff.config -dataDir . -gff3 ref" 
                : () ),
   "(bwa mem $bwaopt -t $cpus $refdir/ref.fa @reads"
-    ." | samtools view -@ $cpus -q $mapqual -F 3844 -S -b -u -T ref.fa -"
+    ." | samtools view -@ $cpus $stv_opt -S -b -u -T ref.fa -"
     ." | samtools sort -@ $cpus - $prefix)",
   "samtools index $prefix.bam",
   "samtools depth -q 20 $prefix.bam | bgzip > $prefix.depth.gz",
@@ -213,6 +216,10 @@ my @cmd = (
   "tabix -p vcf $prefix.filt.subs.vcf.gz",
   "vcf-consensus $prefix.filt.subs.vcf.gz < $refdir/ref.fa > $prefix.consensus.subs.fa",
 );
+
+if ($unmapped) {
+  push @cmd, "(samtools view -u -b -f 12 $prefix.bam | samtools bam2fq - | gzip -1 > $prefix.unmapped.fastq.gz)";
+}
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # run the commands
@@ -429,6 +436,7 @@ sub setOptions {
     {OPT=>"pe2|R2|right=s",  VAR=>\$pe2, DEFAULT=>'', DESC=>"Reads, paired-end R2 (right)"},
     {OPT=>"se|single=s",  VAR=>\$se, DEFAULT=>'', DESC=>"Single-end reads"},
     {OPT=>"peil=s",  VAR=>\$peil, DEFAULT=>'', DESC=>"Reads, paired-end R1/R2 interleaved"},
+    {OPT=>"unmapped!",  VAR=>\$unmapped, DEFAULT=>0,  DESC=>"Keep unmapped reads in BAM and write FASTQ"},
     {OPT=>"mapqual=f",  VAR=>\$mapqual, DEFAULT=>60,  DESC=>"Minimum mapping quality to allow"},
     {OPT=>"mincov=i",  VAR=>\$mincov, DEFAULT=>10,  DESC=>"Minimum coverage of variant site"},
     {OPT=>"minfrac=f",  VAR=>\$minfrac, DEFAULT=>0.9,  DESC=>"Minumum proportion for variant evidence"},
