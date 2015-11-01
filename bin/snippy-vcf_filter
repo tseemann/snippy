@@ -42,8 +42,13 @@ while (my $line = $in->next_line) {
 
 $in->close;
 
-print STDERR "Types:", (map { " $_=".$type{$_} } keys %type), "\n";
-printf STDERR "Passed %d/%d variants (%.2f%%)\n", $passed, $total, 100*$passed/$total;
+if ($total > 0) {
+  print STDERR "Types:", (map { " $_=".$type{$_} } keys %type), "\n";
+  printf STDERR "Passed %d/%d variants (%.2f%%)\n", $passed, $total, 100*$passed/$total;
+}
+else {
+  print STDERR "No variants found.\n";
+}
 
 #----------------------------------------------------------------------
 # Option setting routines
