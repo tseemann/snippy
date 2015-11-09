@@ -103,11 +103,11 @@ save_hash_alignment(\%aln, "$prefix.full.aln", $aformat);
 #print Dumper($snp);
 my $table_fn = "$prefix.tab";
 open TABLE, '>', $table_fn;
-print TABLE tsv('CHR','POS',@id,'LOCUS_TAG','GENE','PRODUCT');
+print TABLE tsv('CHR','POS',@id,'LOCUS_TAG','GENE','PRODUCT','EFFECT');
 
 my $nway_fn = "$prefix.nway.tab";
 open NWAY, '>', $nway_fn;
-print NWAY tsv('CHR','POS',@id,'LOCUS_TAG','GENE','PRODUCT');
+print NWAY tsv('CHR','POS',@id,'LOCUS_TAG','GENE','PRODUCT','EFFECT');
 
 my $vcf_fn = "$prefix.vcf";
 open VCF, '>', $vcf_fn;
@@ -219,10 +219,10 @@ sub add_snippy {
     chomp;
     my($seq,$pos,$type,$ref,$alt,
        undef,undef,undef,undef,undef,
-       $ltag, $gene, $prod) = split m/\t/;
+       $effect, $ltag, $gene, $prod) = split m/\t/;
     # 0:SEQ 1:POS 2:TYPE 3:REF 4:ALT 
     # 5:EVID 6:FTYPE 7:STRAND 8:NT 9:AA 
-    # 10:LOCUS 11:GENE 12:PRODUCT
+    # 10:EFFECT 11:LOCUS 12:GENE 13:PRODUCT
 # next unless $type eq 'snp' or $type eq 'mnp'; # no complex,ins,del
     next unless length($ref) eq length($alt);     # double check REF / ALT
     # if ($type eq 'complex') {  print "$type $ref $alt\n"; }
@@ -231,7 +231,7 @@ sub add_snippy {
       $snp->{$seq}{$pos+$offset}{$id}  = substr($alt,$offset,1);
       $snp->{$seq}{$pos+$offset}{$REF} = substr($ref,$offset,1) unless $noref;
       $len++;
-      $anno->{$seq}{$pos+$offset} = [ $ltag, $gene, $prod ]; # save annotation for TABLE
+      $anno->{$seq}{$pos+$offset} = [ $ltag, $gene, $prod, $effect ]; # save annotation for TABLE
     }
     $num++;
   }
