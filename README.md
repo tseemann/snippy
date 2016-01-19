@@ -153,8 +153,9 @@ However, Snippy is not perfect and sometimes finds questionable variants. Typica
 you would make a copy of `snps.vcf` (let's call it `corrections.vcf`) and remove those
 lines corresponding to variants we don't trust. For example, when correcting Roche 454
 and PacBio SMRT contigs, we primarily expect to find A/T homopolymer errors and hence
-expect to see `ins` more than `snp` type variants. In this case you need to run the
-correcting process manually using these steps:
+expect to see `ins` more than `snp` type variants. 
+
+In this case you need to run the correcting process manually using these steps:
 
 ```
 % cd snippy-outdir
@@ -164,6 +165,14 @@ correcting process manually using these steps:
 % tabix -p vcf corrections.vcf.gz
 % vcf-consensus corrections.vcf.gz < ref.fa > corrected.fa
 ```
+
+You may wish to _iterate_ this process by using `corrected.fa` as a new `--ref` for
+a repeated run of Snippy. Sometimes correcting one error allows BWA to align things
+it couldn't before, and new errors are uncovered.
+
+Snippy is probably not the best way to correct assemblies - you should consider
+dedicated tools such as [iCorn2](http://icorn.sourceforge.net/) or adjust the 
+Quiver parameters (for Pacbio data).
 
 
 #Core SNP phylogeny
