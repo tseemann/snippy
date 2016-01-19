@@ -131,6 +131,41 @@ The variant calling is done by [Freebayes](https://github.com/ekg/freebayes). Ho
 
 By default Snippy uses ```--mincov 10 --minfrac 0.9``` which is reasonable for most cases, but for very high coverage data you may get mixed populations such as (REF:310 ALT:28). Snippy may use a more statistical approach in future versions like [Nesoni](https://github.com/Victorian-Bioinformatics-Consortium/nesoni) does.
 
+#Correcting assembly errors
+
+The _de novo_ assembly process attempts to reconstruct the reads into the original 
+DNA sequences they were derived from. These reconstructed sequences are called 
+_contigs_ or _scaffolds_. For various reasons, small errors can be introduced into
+the assembled contigs which are not supported by the original reads used in the 
+assembly process.
+
+A common strategy is to align the reads back to the contigs to check for discrepancies.
+These errors appear as variants (SNPs and indels). If we can _reverse_ these variants
+than we can "correct" the contigs to match the evidence provided by the original reads.
+Obviously this strategy can go wrong if one is not careful about _how_ the read alignment
+is performed and which variants are accepted.
+
+Snippy is able to help with this contig correction process. In fact, it produces a
+`snps.consensus.fa` FASTA file which is the `ref.fa` input file provided but with the
+discovered variants in `snps.vcf` applied! 
+
+However, Snippy is not perfect and sometimes finds questionable variants. Typically
+you would make a copy of `snps.vcf` (let's call it `corrections.vcf`) and remove those
+lines corresponding to variants we don't trust. For example, when correcting Roche 454
+and PacBio SMRT contigs, we primarily expect to find A/T homopolymer errors and hence
+expect to see `ins` more than `snp` type variants. In this case you need to run the
+correcting process manually using these steps:
+
+```
+% cd snippy-outdir
+% cp snps.vcf corrections.vcf
+% $EDITOR corrections.vcf
+% bgzip -c corrections.vcf > corrections.vcf.gz
+% tabix -p vcf corrections.vcf.gz
+% vcf-consensus corrections.vcf.gz < ref.fa > corrected.fa
+```
+
+
 #Core SNP phylogeny
 
 If you call SNPs for multiple isolates from the same reference, you can
