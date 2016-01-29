@@ -16,7 +16,7 @@ of Snippy results using the same reference and generate a core SNP alignment
 
 ##Quick Start
 ```
-% snippy --cpus 16 --outdir mysnps --ref Listeria.gbk --R1 FDA_R1.fastq.gz --R1 FDA_R2.fastq.gz
+% snippy --cpus 16 --outdir mysnps --ref Listeria.gbk --pe1 FDA_R1.fastq.gz --pe1 FDA_R2.fastq.gz
 <cut>
 Walltime used: 3 min, 42 sec
 Results folder: mysnps
@@ -211,7 +211,7 @@ Please submit suggestions and bug reports here: https://github.com/tseemann/snip
 * Perl >= 5.6
 * BioPerl >= 1.6
 * bwa mem >= 0.7.12 
-* samtools >= 1.1
+* samtools == 1.1
 * GNU parallel > 2013xxxx
 * freebayes >= 0.9.20 
 * freebayes sripts (freebayes-parallel, fasta_generate_regions.py)
