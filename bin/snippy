@@ -198,8 +198,8 @@ my @cmd = (
   ( $nfeat > 0 ? "snpEff build -c $refdir/snpeff.config -dataDir . -gff3 ref" 
                : () ),
   "(bwa mem $bwaopt -t $cpus $refdir/ref.fa @reads"
-    ." | samtools view -@ $cpus $stv_opt -S -b -u -T ref.fa -"
-    ." | samtools sort -@ $cpus - $prefix)",
+    ." | samtools view -@ $cpus $stv_opt -S -b -u -T $refdir/ref.fa -"
+    ." | samtools sort -o $prefix.bam -@ $cpus -)",
   "samtools index $prefix.bam",
   "samtools depth -q 20 $prefix.bam | bgzip > $prefix.depth.gz",
   "tabix -s 1 -b 2 -e 2 $prefix.depth.gz",
