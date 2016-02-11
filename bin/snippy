@@ -23,13 +23,14 @@ my $URL = 'https://github.com/tseemann/snippy';
 my $OPSYS = $^O;
 my $t0 = localtime;
 my $MIN_FREEBAYES_CHUNK_SIZE = 1000;
+my $FAKE_READ_LEN = 250;
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # command line options
 
 my(@Options, $quiet, $force, $outdir, $prefix, 
              $reference, $cpus, 
-             $pe1, $pe2, $se, $peil, $unmapped,
+             $pe1, $pe2, $se, $peil, $ctgs, $unmapped,
              $report, $mapqual, $mincov, $minfrac, $rgid, $bwaopt,
              $cleanup);
 setOptions();
@@ -77,14 +78,14 @@ msg("Using reference: $reference");
 $cpus > 0 or err("Invalid --cpus $cpus");
 msg("Will use $cpus CPU cores.");
 
-($pe1 or $pe2 or $se or $peil) 
-  or err("No read files specified. Use --pe1/--pe2 or --se or --peil");
+($pe1 or $pe2 or $se or $peil or $ctgs) 
+  or err("No read files specified. Use --pe1/--pe2 or --se or --peil or --ctgs");
 
-($pe1 && $pe2) xor $se xor $peil 
-  or err("Can not mix read file types. Either (1) --pe1 and --pe2 (2) --se (3) --peil");
+($pe1 && $pe2) xor $se xor $peil xor $ctgs
+  or err("Can not mix read file types. Either (1) --pe1 and --pe2 (2) --se (3) --peil (4) --ctgs");
 
 my @reads;
-for my $readfn ($pe1, $pe2, $se, $peil) {
+for my $readfn ($pe1, $pe2, $se, $peil, $ctgs) {
   next unless $readfn;
   -r $readfn or err("Can not read sequence file: $readfn");
   push @reads, File::Spec->rel2abs($readfn);
@@ -147,6 +148,35 @@ while (my $seq = $in->next_seq) {
 }
 msg("Wrote $nseq sequences to ref.fa");
 msg("Wrote $nfeat features to ref.gff");
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# if using contigs as fake High Quality FQ reads, tweak some settings
+
+if ($ctgs) {
+  msg("Shredding $reads[0] into pseudo-reads");
+  my $FAKE_READ_COV = $mincov;  # will get twice this due to read + revcom
+  my $stride = int($FAKE_READ_LEN / $FAKE_READ_COV);
+  my $counter=0;
+  my $out_fn = "fake_reads.fq";
+  open my $out, '>', $out_fn;
+  my $in = Bio::SeqIO->new(-file=>$reads[0], -format=>'fasta');
+  while (my $seq = $in->next_seq) {
+    my @dna = ( uc($seq->seq), uc($seq->revcom->seq) );
+    my $L = $seq->length;
+    for ( my $i=0; $i < $L - $FAKE_READ_LEN; $i += $stride ) {
+      for my $r (0, 1) {
+        print $out "\@read$counter.$r\n", 
+                   substr($dna[$r], $i, $FAKE_READ_LEN), "\n",
+                   "+\n", 
+                   ('H')x$FAKE_READ_LEN, "\n";
+      }
+      $counter++;
+    }
+  }
+  close $out;
+  msg("Wrote $counter fake ${FAKE_READ_LEN}bp reads (${FAKE_READ_COV}x, stride ${stride}bp) to $out_fn");
+  @reads = ($out_fn);
+}
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # create config for snpEff
@@ -222,6 +252,11 @@ my @cmd = (
 
 if ($unmapped) {
   push @cmd, "(samtools view -u -b -f 12 $prefix.bam | samtools bam2fq - | gzip -1 > $prefix.unmapped.fastq.gz)";
+}
+
+if ($ctgs) {
+  # remove the fake read file we hacked in
+  push @cmd, "rm -f '$reads[0]'";
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -438,6 +473,7 @@ sub setOptions {
     {OPT=>"pe1|R1|left=s",  VAR=>\$pe1, DEFAULT=>'', DESC=>"Reads, paired-end R1 (left)"},
     {OPT=>"pe2|R2|right=s",  VAR=>\$pe2, DEFAULT=>'', DESC=>"Reads, paired-end R2 (right)"},
     {OPT=>"se|single=s",  VAR=>\$se, DEFAULT=>'', DESC=>"Single-end reads"},
+    {OPT=>"ctgs|contigs=s",  VAR=>\$ctgs, DEFAULT=>'', DESC=>"Don't have reads use these contigs"},
     {OPT=>"peil=s",  VAR=>\$peil, DEFAULT=>'', DESC=>"Reads, paired-end R1/R2 interleaved"},
     {OPT=>"unmapped!",  VAR=>\$unmapped, DEFAULT=>0,  DESC=>"Keep unmapped reads in BAM and write FASTQ"},
     {OPT=>"mapqual=f",  VAR=>\$mapqual, DEFAULT=>60,  DESC=>"Minimum mapping quality to allow"},
@@ -469,7 +505,8 @@ sub usage {
                "Usage:\n",  
                "  $EXE [options] --outdir <dir> --ref <ref> --pe1 <R1.fq.gz> --pe2 <R2.fq.gz>\n",
                "  $EXE [options] --outdir <dir> --ref <ref> --se <454.fastq>\n",
-               "  $EXE [options] --outdir <dir> --ref <ref> --peil <velvet.fa.gz>\n",
+               "  $EXE [options] --outdir <dir> --ref <ref> --peil <interleaved.fa.gz>\n",
+               "  $EXE [options] --outdir <dir> --ref <ref> --ctgs <assembly.fasta>\n",
                "";
 
   foreach (@Options) {
