@@ -196,6 +196,24 @@ Extension | Description
 .tab | Tab-separated columnar list of core SNP sites with alleles and annotations
 .txt | Tab-separated columnar list of alignment/core-size statistics
 
+#Unmapped Reads
+
+Sometimes you are interested in the reads which did *not* align to the reference genome.
+These reads represent DNA that was novel to *your* sample which is potentially interesting.
+A standard strategy is to *de novo* assemble the unmapped reads to discover these novel
+DNA elements, which often comprise mobile genetic elements such as plasmids.
+
+By default, Snippy does **not** keep the unmapped reads, not even in the BAM file.
+If you wish to keep them, use the `--unmapped` option and the unaligned reads will
+be saved to a compressed FASTQ file:
+
+```
+% snippy --outdir out --unmapped ....
+
+% ls out/
+snps.unmapped.fastq.gz ....
+```
+
 #Information
 
 ##Etymology
