@@ -229,7 +229,7 @@ my @cmd = (
                : () ),
   "(bwa mem $bwaopt -t $cpus $refdir/ref.fa @reads"
     ." | samtools view -@ $cpus $stv_opt -S -b -u -T $refdir/ref.fa -"
-    ." | samtools sort -o $prefix.bam -@ $cpus -)",
+    ." | samtools sort -T$prefix.tmp -@ $cpus - | samtools rmdup -s - $prefix.bam)",
   "samtools index $prefix.bam",
   "samtools depth -q 20 $prefix.bam | bgzip > $prefix.depth.gz",
   "tabix -s 1 -b 2 -e 2 $prefix.depth.gz",
