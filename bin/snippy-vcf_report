@@ -9,8 +9,8 @@ setOptions();
 
 if ($auto) {
   $vcf ||= 'snps.vcf';
-  $ref ||= 'ref.fa';
-  $bam ||= 'aln.bam';
+  $ref ||= 'referemce/ref.fa';
+  $bam ||= 'snps.bam';
 }
 
 $vcf or die "need --vcf <snps.vcf>";
