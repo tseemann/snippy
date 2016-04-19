@@ -9,7 +9,7 @@ setOptions();
 
 if ($auto) {
   $vcf ||= 'snps.vcf';
-  $ref ||= 'referemce/ref.fa';
+  $ref ||= 'reference/ref.fa';
   $bam ||= 'snps.bam';
 }
 
