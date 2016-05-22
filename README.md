@@ -16,7 +16,7 @@ of Snippy results using the same reference and generate a core SNP alignment
 
 ##Quick Start
 ```
-% snippy --cpus 16 --outdir mysnps --ref Listeria.gbk --R1 FDA_R1.fastq.gz --R1 FDA_R2.fastq.gz
+% snippy --cpus 16 --outdir mysnps --ref Listeria.gbk --R1 FDA_R1.fastq.gz --R2 FDA_R2.fastq.gz
 <cut>
 Walltime used: 3 min, 42 sec
 Results folder: mysnps
