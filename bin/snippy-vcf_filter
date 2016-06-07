@@ -10,7 +10,7 @@ use Vcf;
 # Command line checking
 
 my @CMDLINE = @ARGV;
-my(@Options, $debug, $mincov, $minfrac, $minqual, $types, $subs);
+my(@Options, $debug, $mincov, $minfrac, $minqual, $types, $subs, $filter);
 setOptions();
 
 my $total=0;
@@ -35,7 +35,8 @@ while (my $line = $in->next_line) {
   next unless $x->{INFO}{AO} / $DP >= $minfrac;
   next if $types and $x->{INFO}{TYPE} !~ m/$types/;
   next if $subs and length( $x->{REF} ) != length( $x->{ALT}->[0] );
-  print $line;
+  $x->{FILTER} = [ $filter ] if $filter;
+  print $in->format_line($x);
   $type{ $x->{INFO}{TYPE} }++;
   $passed++;
 }
@@ -64,6 +65,7 @@ sub setOptions {
     {OPT=>"minqual=f", VAR=>\$minqual, DEFAULT=>10,   DESC=>"Minimum quality (QUAL)"},
     {OPT=>"types=s",   VAR=>\$types,   DEFAULT=>'',   DESC=>"Types eg. 'snp|mnp' '!(complex)'"},
     {OPT=>"subs!",     VAR=>\$subs,    DEFAULT=>'',   DESC=>"Only keep equal length alleles: snp, mnp, some complex"},
+    {OPT=>"filter=s",  VAR=>\$filter,  DEFAULT=>'PASS', DESC=>"Set FILTER field"},
   );
 
   (!@ARGV) && (usage());
