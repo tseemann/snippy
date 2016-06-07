@@ -2,8 +2,7 @@
 use warnings;
 use strict;
 use Time::Piece;
-use List::Util qw(any);
-use List::MoreUtils qw(uniq);
+use List::MoreUtils qw(uniq any);
 use File::Spec;
 use Bio::AlignIO;
 use Bio::LocatableSeq;
