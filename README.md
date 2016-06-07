@@ -170,10 +170,10 @@ You may wish to _iterate_ this process by using `corrected.fa` as a new `--ref` 
 a repeated run of Snippy. Sometimes correcting one error allows BWA to align things
 it couldn't before, and new errors are uncovered.
 
-Snippy is probably not the best way to correct assemblies - you should consider
-dedicated tools such as [iCorn2](http://icorn.sourceforge.net/) or adjust the 
+Snippy may not be the best way to correct assemblies - you should consider
+dedicated tools such as [PILON](http://www.broadinstitute.org/software/pilon/) 
+or [iCorn2](http://icorn.sourceforge.net/), or adjust the 
 Quiver parameters (for Pacbio data).
-
 
 #Core SNP phylogeny
 
