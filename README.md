@@ -229,14 +229,15 @@ Please submit suggestions and bug reports here: https://github.com/tseemann/snip
 * Perl >= 5.6
 * BioPerl >= 1.6
 * bwa mem >= 0.7.12 
-* samtools >= 1.1
+* samtools >= 1.3
 * GNU parallel > 2013xxxx
 * freebayes >= 0.9.20 
 * freebayes sripts (freebayes-parallel, fasta_generate_regions.py)
-* vcflib (vcffilter, vcfstreamsort, vcfuniq, vcffirstheader)
+* vcflib (vcfstreamsort, vcfuniq, vcffirstheader)
 * vcftools (vcf-consensus)
 * snpEff >= 4.1
 
 ##Bundled binaries
-For a modern Linux system (Ubuntu >= 12.04) and Mac OS X all the binaries, JARs and scripts are included. 
+For Linux (compiled on Centos 5) and Mac OS X all the binaries, JARs and scripts are included. 
+
 
