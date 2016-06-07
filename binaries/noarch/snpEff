@@ -42,9 +42,6 @@ done
 if [ "$jvm_mem_opts" == "" ]; then
     jvm_mem_opts="$default_jvm_mem_opts"
 fi
-if [[ "$pass_args" != "" && ! "$pass_args" =~ "-c " ]]; then
-    pass_args="$pass_args -c /bio/linuxbrew/Cellar/snpeff/4.1l/share/snpeff/snpEff.config"
-fi
 
 exec $java $jvm_mem_opts $jvm_prop_opts -jar ${jardir}/snpEff.jar $pass_args
 exit
