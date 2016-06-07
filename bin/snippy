@@ -16,7 +16,7 @@ use Bio::Tools::GFF;
 
 my $EXE = $FindBin::RealScript;
 my $BINDIR = $FindBin::RealBin;
-my $VERSION = "3.0";
+my $VERSION = "3.1-beta";
 my $SYNOPSIS = "fast bacterial variant calling from NGS reads";
 my $AUTHOR = 'Torsten Seemann <torsten.seemann@gmail.com>';
 my $URL = 'https://github.com/tseemann/snippy';
@@ -70,10 +70,12 @@ for my $exe (qw(bwa samtools tabix bgzip snpEff java gzip
 
 $prefix =~ m{/} and err("File --prefix can not have slash '/' in it.");
 
-$reference or err("Please supply a reference FASTA file with --reference");
+$reference or err("Please supply a reference FASTA/GBK/EMBL file with --reference");
 -r $reference or err("Invalid --reference filename");
 $reference = File::Spec->rel2abs($reference);
 msg("Using reference: $reference");
+my $ref_fmt = guess_format($reference) or err("Could not guess format '$reference'");
+msg("Treating reference as '$ref_fmt' format.");
 
 $cpus > 0 or err("Invalid --cpus $cpus");
 msg("Will use $cpus CPU cores.");
@@ -121,7 +123,7 @@ msg("Creating reference folder: $refdir");
 make_path($refdir);
 
 msg("Extracting FASTA and GFF from reference.");
-my $in = Bio::SeqIO->new(-file=>$reference) or err("Could not guess file format: $reference");
+my $in = Bio::SeqIO->new(-file=>$reference, -format=>$ref_fmt) or err("Could not open --reference: $reference");
 my $out = Bio::SeqIO->new(-file=>">$refdir/ref.fa", -format=>'fasta');
 my $gff = Bio::Tools::GFF->new(-file=>">$refdir/ref.gff", -gff_version=>3);
 my $nseq = 0;
@@ -410,6 +412,20 @@ srand( $$ + $secs + $num_var + $refsize ); # seed
 msg( $motd[ int(rand(scalar(@motd))) ] );
 
 msg("Done.");
+
+#----------------------------------------------------------------------
+
+sub guess_format {
+  my($fname) = @_;
+  open FH, '<', $fname or return;
+  my($line) = <FH>;
+  $line or return;
+  close FH;
+  return 'genbank' if $line =~ m/^LOCUS/;
+  return 'embl' if $line =~ m/^ID\s+/;
+  return 'fasta' if $line =~ m/^\s*>/;
+  return;
+}
 
 #----------------------------------------------------------------------
 
