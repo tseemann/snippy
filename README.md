@@ -193,6 +193,7 @@ of "ins", "del" variant types, and just use variant sites, these are the "core S
 Extension | Description
 ----------|--------------
 .aln | A core SNP alignment in the ```--aformat``` format (default FASTA)
+.full.aln | A whole genome SNP alignment (includes invariant sites)
 .tab | Tab-separated columnar list of core SNP sites with alleles and annotations
 .txt | Tab-separated columnar list of alignment/core-size statistics
 
