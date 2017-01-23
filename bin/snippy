@@ -16,7 +16,7 @@ use Bio::Tools::GFF;
 
 my $EXE = $FindBin::RealScript;
 my $BINDIR = $FindBin::RealBin;
-my $VERSION = "3.1";
+my $VERSION = "3.2";
 my $SYNOPSIS = "fast bacterial variant calling from NGS reads";
 my $AUTHOR = 'Torsten Seemann <torsten.seemann@gmail.com>';
 my $URL = 'https://github.com/tseemann/snippy';
@@ -156,8 +156,9 @@ msg("Wrote $nfeat features to ref.gff");
 
 if ($ctgs) {
   msg("Shredding $reads[0] into pseudo-reads");
-  my $FAKE_READ_COV = $mincov;  # will get twice this due to read + revcom
-  my $stride = int($FAKE_READ_LEN / $FAKE_READ_COV);
+  my $FAKE_READ_COV = 2 * $mincov;
+  # we halve the coverage as we will take 2 reads for each stride (fwd + rev)
+  my $stride = $FAKE_READ_LEN / (0.5 * $FAKE_READ_COV);
   my $counter=0;
   my $out_fn = "fake_reads.fq";
   open my $out, '>', $out_fn;
@@ -165,14 +166,19 @@ if ($ctgs) {
   while (my $seq = $in->next_seq) {
     my @dna = ( uc($seq->seq), uc($seq->revcom->seq) );
     my $L = $seq->length;
-    for ( my $i=0; $i < $L - $FAKE_READ_LEN; $i += $stride ) {
+    my $len = min($L, $FAKE_READ_LEN); # limit read to contig size (small contigs)
+    for ( my $i = -$len; $i < $L + $len; $i += $stride ) {
+      # ensure good coverage at contig ends by striding before and after
+      my $start = max( $i, 0 );
+      $start = min( $start, $L - $len );
       for my $r (0, 1) {
-        print $out "\@read$counter.$r\n", 
-                   substr($dna[$r], $i, $FAKE_READ_LEN), "\n",
+        $counter++;
+#        print $out "\@read$counter ($i => $start) len=$len\n", 
+        print $out "\@read$counter\n", 
+                   substr( $dna[$r], int($start), $len ), "\n",
                    "+\n", 
-                   ('H')x$FAKE_READ_LEN, "\n";
+                   ('H')x$len, "\n";
       }
-      $counter++;
     }
   }
   close $out;
