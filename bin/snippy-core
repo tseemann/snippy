@@ -267,7 +267,7 @@ sub setOptions {
     {OPT=>"inprefix=s", VAR=>\$inprefix,  DEFAULT=>'snps' , DESC=>"Preferred input prefix of Snippy files"},
     {OPT=>"prefix=s",   VAR=>\$prefix,    DEFAULT=>'core' , DESC=>"Output file prefix"},
     {OPT=>"noref!",     VAR=>\$noref,     DEFAULT=>0 , DESC=>"Exclude reference"},
-    {OPT=>"mincov=i",   VAR=>\$mincov,    DEFAULT=>10 , DESC=>"Minimum depth of coverage to consider core"},
+#    {OPT=>"mincov=i",   VAR=>\$mincov,    DEFAULT=>10 , DESC=>"Minimum depth of coverage to consider core"},
     {OPT=>"aformat=s",  VAR=>\$aformat,   DEFAULT=>'fasta' , DESC=>"Output alignment format: nexus fasta phylip maf clustalw ..."},
   );
 
