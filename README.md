@@ -1,10 +1,10 @@
-#Snippy
+# Snippy
 Rapid haploid variant calling and core SNP phylogeny
 
-##Author
+## Author
 Torsten Seemann (@torstenseemann)
 
-##Synopsis
+## Synopsis
 
 Snippy finds SNPs between a haploid reference genome and your NGS sequence
 reads.  It will find both substitutions (snps) and insertions/deletions
@@ -14,7 +14,7 @@ consistent set of output files in a single folder.  It can then take a set
 of Snippy results using the same reference and generate a core SNP alignment
 (and ultimately a phylogenomic tree).
 
-##Quick Start
+## Quick Start
 ```
 % snippy --cpus 16 --outdir mysnps --ref Listeria.gbk --R1 FDA_R1.fastq.gz --R2 FDA_R2.fastq.gz
 <cut>
@@ -43,9 +43,9 @@ Found 2814 core SNPs from 96615 SNPs.
 core.aln core.tab core.txt
 ```
 
-#Installation
+# Installation
 
-##Homebrew
+## Homebrew
 Install [HomeBrew](http://brew.sh/) (Mac OS X) or [LinuxBrew](http://brew.sh/linuxbrew/) (Linux).
 
     brew tap homebrew/science
@@ -53,21 +53,21 @@ Install [HomeBrew](http://brew.sh/) (Mac OS X) or [LinuxBrew](http://brew.sh/lin
     brew install snippy
     snippy --help
 
-##Source
+## Source
 This will install the latest version direct from Github. You'll need to add the ```bin``` directory to your PATH.
 
     cd $HOME
     git clone https://github.com/tseemann/snippy.git
     $HOME/snippy/bin/snippy --help
 
-#Calling SNPs
+# Calling SNPs
 
-##Input Requirements
+## Input Requirements
 * a reference genome in FASTA or GENBANK format (can be in multiple contigs)
 * sequence read files in FASTQ or FASTA format (can be .gz compressed) format
 * a folder to put the results in
 
-##Output Files
+## Output Files
 
 Extension | Description
 ----------|--------------
@@ -89,7 +89,7 @@ Extension | Description
 .depth.gz | Output of ```samtools depth``` for the .bam file
 .depth.gz.tbi | Index for the .depth.gz (_currently unused_)
 
-##Columns in the TAB/CSV/HTML formats
+## Columns in the TAB/CSV/HTML formats
 
 Name | Description
 -----|------------
@@ -113,7 +113,7 @@ GENE | The ```/gene``` tag of the feature (if it existed)
 PRODUCT | The ```/product``` tag of the feature (if it existed)
 EFFECT | The ```snpEff``` annotated consequence of this variant
 
-##Variant Types
+## Variant Types
 
 Type | Name | Example
 -----|------|-------------
@@ -123,14 +123,14 @@ ins  | Insertion | ATT => AGTT
 del  | Deletion | ACGG => ACG
 complex | Combination of snp/mnp | ATTC => GTTA
 
-##The variant caller
+## The variant caller
 The variant calling is done by [Freebayes](https://github.com/ekg/freebayes). However, Snippy uses a very simple model for reporting variants, relying on two main options:
 * ```--mincov``` is the minimum number of reads covering the variant position.
 * ```--minfrac``` is the minimum proportion of those reads which must differ from the reference.
 
 By default Snippy uses ```--mincov 10 --minfrac 0.9``` which is reasonable for most cases, but for very high coverage data you may get mixed populations such as (REF:310 ALT:28). Snippy may use a more statistical approach in future versions like [Nesoni](https://github.com/Victorian-Bioinformatics-Consortium/nesoni) does.
 
-#Correcting assembly errors
+# Correcting assembly errors
 
 The _de novo_ assembly process attempts to reconstruct the reads into the original 
 DNA sequences they were derived from. These reconstructed sequences are called 
@@ -174,7 +174,7 @@ dedicated tools such as [PILON](http://www.broadinstitute.org/software/pilon/)
 or [iCorn2](http://icorn.sourceforge.net/), or adjust the 
 Quiver parameters (for Pacbio data).
 
-#Core SNP phylogeny
+# Core SNP phylogeny
 
 If you call SNPs for multiple isolates from the same reference, you can
 produce an alignment of "core SNPs" which can be used to build a
@@ -184,10 +184,10 @@ have the same nucleotide in every sample ("monomorphic") or some samples can
 be different ("polymorphic" or "variant").  If we ignore the complications
 of "ins", "del" variant types, and just use variant sites, these are the "core SNP genome".
 
-##Input Requirements
+## Input Requirements
 * a set of Snippy folders which used the same ``--ref`` sequence.
 
-##Output Files
+## Output Files
 
 Extension | Description
 ----------|--------------
@@ -196,7 +196,7 @@ Extension | Description
 .tab | Tab-separated columnar list of core SNP sites with alleles and annotations
 .txt | Tab-separated columnar list of alignment/core-size statistics
 
-#Unmapped Reads
+# Unmapped Reads
 
 Sometimes you are interested in the reads which did *not* align to the reference genome.
 These reads represent DNA that was novel to *your* sample which is potentially interesting.
@@ -214,18 +214,18 @@ be saved to a compressed FASTQ file:
 snps.unmapped.fastq.gz ....
 ```
 
-#Information
+# Information
 
-##Etymology
+## Etymology
 The name Snippy is a combination of [SNP](http://en.wikipedia.org/wiki/Single-nucleotide_polymorphism) (pronounced "snip") , [snappy](http://www.thefreedictionary.com/snappy) (meaning "quick") and [Skippy the Bush Kangaroo](http://en.wikipedia.org/wiki/Skippy_the_Bush_Kangaroo) (to represent its Australian origin)
 
-##License
+## License
 Snippy is free software, released under the GPL (version 3).
 
-##Issues
+## Issues
 Please submit suggestions and bug reports here: https://github.com/tseemann/snippy/issues
 
-##Requirements
+## Requirements
 * Perl >= 5.6
 * BioPerl >= 1.6
 * bwa mem >= 0.7.12 
@@ -237,7 +237,5 @@ Please submit suggestions and bug reports here: https://github.com/tseemann/snip
 * vcftools (vcf-consensus)
 * snpEff >= 4.1
 
-##Bundled binaries
+## Bundled binaries
 For Linux (compiled on Centos 5) and Mac OS X all the binaries, JARs and scripts are included. 
-
-
