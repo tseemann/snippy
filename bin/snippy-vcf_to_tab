@@ -80,11 +80,17 @@ while (<VCF>) {
     }
 
     # convert snpEff result into something readable!
+    ##INFO=<ID=ANN,Number=.,Type=String,Description="Functional annotations: 
+    # 0         1            2                   3           4         5              6             7                    8
+    # 'Allele | Annotation | Annotation_Impact | Gene_Name | Gene_ID | Feature_Type | Feature_ID  | Transcript_BioType | Rank 
+    #   9        10       11                       12                     13                   14         15
+    # | HGVS.c | HGVS.p | cDNA.pos / cDNA.length | CDS.pos / CDS.length | AA.pos / AA.length | Distance | ERRORS / WARNINGS / INFO'
     if ($tag->{ANN}) {
       my @eff = split m/\|/, $tag->{ANN};
       $anno{NT_POS} = $eff[11];
       $anno{AA_POS} = $eff[13];
-      $anno{EFFECT} = join(' ', @eff[1,9,10] );
+      # print STDERR Dumper($tag) if !defined $eff[1] or !defined $eff[10] or !defined $eff[1];
+      $anno{EFFECT} = join(' ', map { defined($_) ? $_ : '' } @eff[1,9,10] );
     }
     else {
       $anno{EFFECT} = "variant did not have ANN annotation";
@@ -99,7 +105,7 @@ while (<VCF>) {
   my $evid = join(' ', @evid);
 
   print join("\t", 
-    $chr, $pos, $tag->{TYPE}, $ref_base, $alt_base, $evid, (map { $anno{$_} } @ANNO)
+    $chr, $pos, $tag->{TYPE}, $ref_base, $alt_base, $evid, (map { $anno{$_} || '' } @ANNO)
   ), "\n";
   $count++;  
 }
