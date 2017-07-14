@@ -498,7 +498,7 @@ sub setOptions {
     {OPT=>"ctgs|contigs=s",  VAR=>\$ctgs, DEFAULT=>'', DESC=>"Don't have reads use these contigs"},
     {OPT=>"peil=s",  VAR=>\$peil, DEFAULT=>'', DESC=>"Reads, paired-end R1/R2 interleaved"},
     {OPT=>"unmapped!",  VAR=>\$unmapped, DEFAULT=>0,  DESC=>"Keep unmapped reads in BAM and write FASTQ"},
-    {OPT=>"mapqual=f",  VAR=>\$mapqual, DEFAULT=>60,  DESC=>"Minimum mapping quality to allow"},
+    {OPT=>"mapqual=i",  VAR=>\$mapqual, DEFAULT=>60,  DESC=>"Minimum mapping quality to allow"},
     {OPT=>"mincov=i",  VAR=>\$mincov, DEFAULT=>10,  DESC=>"Minimum coverage of variant site"},
     {OPT=>"minfrac=f",  VAR=>\$minfrac, DEFAULT=>0.9,  DESC=>"Minumum proportion for variant evidence"},
     {OPT=>"report!",  VAR=>\$report, DEFAULT=>0,  DESC=>"Produce long report with visual alignment (slow)"},
