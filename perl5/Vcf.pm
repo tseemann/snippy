@@ -1,9 +1,9 @@
 package Vcf;
 
-our $VERSION = 'r940';
+our $VERSION = 'r953';
 
 # http://vcftools.sourceforge.net/specs.html
-# https://github.com/samtools/hts-specs
+# http://samtools.github.io/hts-specs/
 #
 # Authors: petr.danecek@sanger
 # for VCF v3.2, v3.3, v4.0, v4.1, v4.2
@@ -263,6 +263,7 @@ sub close
     if ( !$$self{fh} ) { return; }
     my $ret = close($$self{fh});
     delete($$self{fh});
+    $$self{buffer} = [];
 	return $ret;
 }
 
@@ -1758,6 +1759,15 @@ sub parse_AGtags
                 if ( !exists($$sample{$tag}) or $$sample{$tag} eq $missing ) { next; }
                 my @values = split(/,/,$$sample{$tag});
                 my $ploidy = $self->guess_ploidy(scalar @alleles, scalar @values) - 1;
+                if ( $ploidy<0 ) 
+                { 
+                    my $nals  = scalar @alleles;
+                    my $nvals = scalar @values;
+                    my $ndip  = $nals*($nals+1)/2;
+                    $self->throw(
+                        "Wrong number of values in $name/$tag at $$rec{CHROM}:$$rec{POS} .. nAlleles=$nals, nValues=$nvals.\n".
+                        "Expected $ndip values for diploid genotypes or $nals for haploid genotypes.\n");
+                }
                 if ( $ploidy>1 ) { $self->throw("Sorry, not ready for ploidy bigger than 2\n"); }
                 if ( $ploidy!=1 ) { $$rec{_cached_ploidy}{$name} = $ploidy; }
                 $$sample{$tag} = {};
@@ -2336,6 +2346,7 @@ sub validate_info_field
     # Expected numbers
     my $ng = -1;
     my $na = -1;
+    my $nr = -1;
     if ( $$self{version}>4.0 )
     {
         if ( $$alts[0] eq '.' ) { $ng=1; $na=1; }
@@ -2343,6 +2354,7 @@ sub validate_info_field
         {
             $na = @$alts;
             $ng = (1+$na+1)*($na+1)/2;
+            $nr = $na+1;
         }
     }
 
@@ -2366,6 +2378,10 @@ sub validate_info_field
         elsif ( $$type{Number} eq 'A' )
         {
             if ( $na != @vals && !(@vals==1 && $vals[0] eq '.') ) { push @errs, "INFO tag [$key=$value] expected different number of values (expected $na, found ".scalar @vals.")"; }
+        }
+        elsif ( $$type{Number} eq 'R' )
+        {
+            if ( $nr != @vals && !(@vals==1 && $vals[0] eq '.') ) { push @errs, "INFO tag [$key=$value] expected different number of values (expected $nr, found ".scalar @vals.")"; }
         }
         elsif ( $$type{Number}==0 ) 
         {
@@ -2401,7 +2417,7 @@ sub guess_ploidy
     my ($self, $nals, $nvals) = @_;
     if ( $nvals==$nals ) { return 1; }
     if ( $nvals==binom(1+$nals,2) ) { return 2; }
-    $self->throw("Could not determine the ploidy (nals=$nals, nvals=$nvals). (TODO: ploidy bigger than 2)\n", binom(2+$nals,2));
+    return -1;
 }
 
 sub binom
@@ -2436,13 +2452,15 @@ sub validate_gtype_field
     # Expected numbers
     my $ng = -1;
     my $na = -1;
+    my $nr = -1;
     if ( $$self{version}>4.0 )
     {
-        if ( $$alts[0] eq '.' ) { $ng=1; $na=1; }
+        if ( $$alts[0] eq '.' ) { $ng=1; $na=1; $nr=1; }
         else
         {
             $na = @$alts;
             $ng = binom($ploidy+$na,$ploidy);
+            $nr = $na+1;
         }
     }
 
@@ -2464,6 +2482,10 @@ sub validate_gtype_field
         elsif ( $$type{Number} eq 'A' )
         {
             if ( $na != @vals && !(@vals==1 && $vals[0] eq '.') ) { push @errs, "FORMAT tag [$key] expected different number of values (expected $na, found ".scalar @vals.")"; }
+        }
+        elsif ( $$type{Number} eq 'R' )
+        {
+            if ( $nr != @vals && !(@vals==1 && $vals[0] eq '.') ) { push @errs, "FORMAT tag [$key] expected different number of values (expected $nr, found ".scalar @vals.")"; }
         }
         elsif ( $$type{Number}!=-1 && @vals!=$$type{Number} )
         {
