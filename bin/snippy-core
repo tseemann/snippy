@@ -76,8 +76,10 @@ for my $id (@id) {
 }
 
 msg("Patching variant sites into whole genome alignment...");
-for my $seq (keys %$snp) {
-  for my $pos (keys %{$snp->{$seq}}) {
+my $patched=0;
+for my $seq (sort { $a cmp $b } keys %$snp) {
+  for my $pos (sort { $a <=> $b } keys %{$snp->{$seq}}) {
+    msg("Patched $patched so far... (currently at $seq:$pos)") if ++$patched % 10_000 == 0;
     my $var = $snp->{$seq}{$pos};    
 #    for my $id (keys %$var) {
 #      substr $aln{$id}{$seq}, $pos-1, 1, $var->{$id};
