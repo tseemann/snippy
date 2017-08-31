@@ -32,7 +32,8 @@ my $FAKE_READ_LEN = 250;
 my(@Options, $quiet, $force, $outdir, $prefix, 
              $reference, $cpus, 
              $pe1, $pe2, $se, $peil, $ctgs, $unmapped,
-             $report, $mapqual, $mincov, $minfrac, $rgid, $bwaopt,
+             $report, $mapqual, $basequal,
+             $mincov, $minfrac, $rgid, $bwaopt,
              $cleanup);
 setOptions();
 
@@ -239,7 +240,7 @@ msg("Using BAM RG (Read Group) ID: $rgid");
 $bwaopt .= qq{ -v 2 -M -R '\@RG\\tID:$rgid\\tSM:$rgid'};
 $bwaopt .= ' -p' if $peil;
 
-my $fbopt = "-p 1 -q 20 -m $mapqual --min-coverage $mincov -V";
+my $fbopt = "-p 1 -q $basequal -m $mapqual --min-coverage $mincov -V";
 
 # if we don't want unmapped reads, be ruthless and discard anything remotely  unuseful
 my $FILTER = $unmapped ? "" : "samtools view -u -T $refdir/ref.fa -F 3844 -q $mapqual |";
@@ -256,7 +257,7 @@ my @cmd = (
                : () ),
   "(bwa mem $bwaopt -t $cpus $refdir/ref.fa @reads | $FILTER samtools sort --reference $refdir/ref.fa > $prefix.bam)",
   "samtools index $prefix.bam",
-  "samtools depth -aa -q 20 $prefix.bam | bgzip > $prefix.depth.gz",
+  "samtools depth -aa -q $basequal $prefix.bam | bgzip > $prefix.depth.gz",
   "tabix -s 1 -b 2 -e 2 $prefix.depth.gz",
   "fasta_generate_regions.py $refdir/ref.fa.fai $chunk_size > $refdir/ref.txt",
   "freebayes-parallel $refdir/ref.txt $cpus $fbopt -f $refdir/ref.fa $prefix.bam > $prefix.raw.vcf",
@@ -521,7 +522,8 @@ sub setOptions {
     {OPT=>"ctgs|contigs=s",  VAR=>\$ctgs, DEFAULT=>'', DESC=>"Don't have reads use these contigs"},
     {OPT=>"peil=s",  VAR=>\$peil, DEFAULT=>'', DESC=>"Reads, paired-end R1/R2 interleaved"},
     {OPT=>"unmapped!",  VAR=>\$unmapped, DEFAULT=>0,  DESC=>"Keep unmapped reads in BAM and write FASTQ"},
-    {OPT=>"mapqual=i",  VAR=>\$mapqual, DEFAULT=>60,  DESC=>"Minimum mapping quality to allow"},
+    {OPT=>"mapqual=i",  VAR=>\$mapqual, DEFAULT=>60,  DESC=>"Minimum read mapping quality to consider"},
+    {OPT=>"basequal=i",  VAR=>\$basequal, DEFAULT=>20,  DESC=>"Minimum base quality to consider"},
     {OPT=>"mincov=i",  VAR=>\$mincov, DEFAULT=>10,  DESC=>"Minimum coverage of variant site"},
     {OPT=>"minfrac=f",  VAR=>\$minfrac, DEFAULT=>0.9,  DESC=>"Minumum proportion for variant evidence"},
     {OPT=>"report!",  VAR=>\$report, DEFAULT=>0,  DESC=>"Produce long report with visual alignment (slow)"},
