@@ -393,14 +393,20 @@ if ($report) {
 # clean up
 
 if ($cleanup) {
-  my @delme = map { "$refdir/ref.fa$_" } ('', qw(.fai .amb .ann .bwt .pac .sa));
+  my @delme = map { "$refdir/ref.fa$_" } qw(.fai .amb .ann .bwt .pac .sa);
   push @delme, ("$prefix.bam", "$prefix.bam.bai", "$prefix.raw.vcf");
+  push @delme, glob("$prefix.*.tbi");
+  push @delme, glob("$prefix.*.gz");
+  push @delme, glob("$prefix.consensus*.fa");
   for my $file (@delme) {
     msg("Deleting: $file");
     unlink $file;
   }
-  msg("Removing folder: $refdir");
-  remove_tree($refdir);
+  for my $subdir ('genomes', 'ref') {
+    my $d = "$refdir/$subdir";
+    msg("Removing folder: $d");
+    remove_tree($d);
+  }
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -519,7 +525,7 @@ sub setOptions {
     {OPT=>"mincov=i",  VAR=>\$mincov, DEFAULT=>10,  DESC=>"Minimum coverage of variant site"},
     {OPT=>"minfrac=f",  VAR=>\$minfrac, DEFAULT=>0.9,  DESC=>"Minumum proportion for variant evidence"},
     {OPT=>"report!",  VAR=>\$report, DEFAULT=>0,  DESC=>"Produce long report with visual alignment (slow)"},
-    {OPT=>"cleanup!",  VAR=>\$cleanup, DEFAULT=>0,  DESC=>"Remove all non-SNP files: BAMs, indices etc"},
+    {OPT=>"cleanup!",  VAR=>\$cleanup, DEFAULT=>0,  DESC=>"Remove most files not needed for snippy-core (inc. BAMs)"},
     {OPT=>"rgid=s",  VAR=>\$rgid, DEFAULT=>'',  DESC=>"Use this \@RG ID: in the BAM header"},
     {OPT=>"bwaopt=s",  VAR=>\$bwaopt, DEFAULT=>'',  DESC=>"Extra BWA MEM options, eg. -x pacbio"},
   );
