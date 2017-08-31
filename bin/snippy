@@ -256,7 +256,7 @@ my @cmd = (
                : () ),
   "(bwa mem $bwaopt -t $cpus $refdir/ref.fa @reads | $FILTER samtools sort --reference $refdir/ref.fa > $prefix.bam)",
   "samtools index $prefix.bam",
-  "samtools depth -q 20 $prefix.bam | bgzip > $prefix.depth.gz",
+  "samtools depth -aa -q 20 $prefix.bam | bgzip > $prefix.depth.gz",
   "tabix -s 1 -b 2 -e 2 $prefix.depth.gz",
   "fasta_generate_regions.py $refdir/ref.fa.fai $chunk_size > $refdir/ref.txt",
   "freebayes-parallel $refdir/ref.txt $cpus $fbopt -f $refdir/ref.fa $prefix.bam > $prefix.raw.vcf",
