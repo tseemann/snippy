@@ -242,7 +242,7 @@ $bwaopt .= ' -p' if $peil;
 my $fbopt = "-p 1 -q 20 -m $mapqual --min-coverage $mincov -V";
 
 # if we don't want unmapped reads, be ruthless and discard anything remotely  unuseful
-my $stv_opt = $unmapped ? "" : "-F 3844 -q $mapqual";
+my $FILTER = $unmapped ? "" : "samtools view -u -T $refdir/ref.fa -F 3844 -q $mapqual |";
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # prepare the commands
@@ -254,7 +254,7 @@ my @cmd = (
   "mkdir $refdir/ref && bgzip -c $refdir/ref.gff > $refdir/ref/genes.gff.gz",
   ( $nfeat > 0 ? "snpEff build -c $refdir/snpeff.config -dataDir . -gff3 ref" 
                : () ),
-  "(bwa mem $bwaopt -t $cpus $refdir/ref.fa @reads | samtools sort --reference $refdir/ref.fa > $prefix.bam)",
+  "(bwa mem $bwaopt -t $cpus $refdir/ref.fa @reads | $FILTER samtools sort --reference $refdir/ref.fa > $prefix.bam)",
   "samtools index $prefix.bam",
   "samtools depth -q 20 $prefix.bam | bgzip > $prefix.depth.gz",
   "tabix -s 1 -b 2 -e 2 $prefix.depth.gz",
