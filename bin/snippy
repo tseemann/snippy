@@ -169,6 +169,10 @@ while (my $seq = $in->next_seq) {
       my($id) = $f->get_tag_values('locus_tag');
       $f->add_tag_value('ID', $id);
     }
+    if ($f->has_tag('gene')) {
+      my($gene) = $f->get_tag_values('gene');
+      $f->add_tag_value('Name', $gene);
+    }
     $gff->write_feature($f);
     $nfeat++;
   }
