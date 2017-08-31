@@ -130,7 +130,63 @@ The variant calling is done by [Freebayes](https://github.com/ekg/freebayes). Ho
 
 By default Snippy uses ```--mincov 10 --minfrac 0.9``` which is reasonable for most cases, but for very high coverage data you may get mixed populations such as (REF:310 ALT:28). Snippy may use a more statistical approach in future versions like [Nesoni](https://github.com/Victorian-Bioinformatics-Consortium/nesoni) does.
 
-# Correcting assembly errors
+# Core SNP phylogeny
+
+If you call SNPs for multiple isolates from the same reference, you can
+produce an alignment of "core SNPs" which can be used to build a
+high-resolution phylogeny (ignoring possible recombination).  A "core site"
+is a genomic position that is present in _all_ the samples.  A core site can
+have the same nucleotide in every sample ("monomorphic") or some samples can
+be different ("polymorphic" or "variant").  If we ignore the complications
+of "ins", "del" variant types, and just use variant sites, these are the "core SNP genome".
+
+## Input Requirements
+* a set of Snippy folders which used the same ``--ref`` sequence.
+
+## Output Files
+
+Extension | Description
+----------|--------------
+.aln | A core SNP alignment in the ```--aformat``` format (default FASTA)
+.full.aln | A whole genome SNP alignment (includes invariant sites)
+.tab | Tab-separated columnar list of core SNP sites with alleles and annotations
+.txt | Tab-separated columnar list of alignment/core-size statistics
+
+# Advanced usage
+
+## Finding SNPs between contigs
+
+Sometimes one of your samples is only available as contigs, without
+corresponding FASTQ reads. You can still use these contigs with Snippy
+to find variants against a reference. It does this by shredding the contigs
+into 250 bp single-end reads at `2 &times; --mincov` uniform coverage.
+
+To use this feature, instead of providing `--R1` and `--R2` you use the
+`--ctgs` option with the contigs file:
+
+```
+% ls
+ref.gbk mutant.fasta
+
+% snippy --outdir mut1 --ref ref.gbk --ctgs mut1.fasta
+Shredding mut1.fasta into pseudo-reads.
+Identified 257 variants.
+
+% snippy --outdir mut2 --ref ref.gbk --ctgs mut2.fasta
+Shredding mut2.fasta into pseudo-reads.
+Identified 413 variants.
+
+% snippy-core mut1 mut2 
+Found 129 core SNPs from 541 variant sites.
+
+% ls
+core.aln core.full.aln ...
+```
+
+This output folder is completely compatible with `snippy-core` so you can
+mix FASTQ and contig based `snippy` output folders to produce alignments.
+
+## Correcting assembly errors
 
 The _de novo_ assembly process attempts to reconstruct the reads into the original 
 DNA sequences they were derived from. These reconstructed sequences are called 
@@ -174,29 +230,7 @@ dedicated tools such as [PILON](http://www.broadinstitute.org/software/pilon/)
 or [iCorn2](http://icorn.sourceforge.net/), or adjust the 
 Quiver parameters (for Pacbio data).
 
-# Core SNP phylogeny
-
-If you call SNPs for multiple isolates from the same reference, you can
-produce an alignment of "core SNPs" which can be used to build a
-high-resolution phylogeny (ignoring possible recombination).  A "core site"
-is a genomic position that is present in _all_ the samples.  A core site can
-have the same nucleotide in every sample ("monomorphic") or some samples can
-be different ("polymorphic" or "variant").  If we ignore the complications
-of "ins", "del" variant types, and just use variant sites, these are the "core SNP genome".
-
-## Input Requirements
-* a set of Snippy folders which used the same ``--ref`` sequence.
-
-## Output Files
-
-Extension | Description
-----------|--------------
-.aln | A core SNP alignment in the ```--aformat``` format (default FASTA)
-.full.aln | A whole genome SNP alignment (includes invariant sites)
-.tab | Tab-separated columnar list of core SNP sites with alleles and annotations
-.txt | Tab-separated columnar list of alignment/core-size statistics
-
-# Unmapped Reads
+## Unmapped Reads
 
 Sometimes you are interested in the reads which did *not* align to the reference genome.
 These reads represent DNA that was novel to *your* sample which is potentially interesting.
