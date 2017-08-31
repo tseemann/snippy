@@ -26,6 +26,7 @@ sub error
         "Options:\n",
         "   -h, -?, --help                   This help message.\n",
         "   -H, --haplotype <int>            Apply only variants for the given haplotype (1,2)\n",
+        "   -i, --iupac-codes                Apply variants in the form of IUPAC ambiguity codes\n",
         "   -s, --sample <name>              If not given, all variants are applied\n",
         "Examples:\n",
         "   # Get the consensus for one region. The fasta header lines are then expected\n",
@@ -42,10 +43,33 @@ sub parse_params
     {
         if ( $arg eq '-?' || $arg eq '-h' || $arg eq '--help' ) { error(); }
         if ( $arg eq '-s' || $arg eq '--sample' ) { $$opts{sample}=shift(@ARGV); next; }
+        if ( $arg eq '-i' || $arg eq '--iupac-codes' ) { $$opts{iupac}=1; next; }
         if ( $arg eq '-H' || $arg eq '--haplotype' ) { $$opts{haplotype}=shift(@ARGV); next; }
         if ( -e $arg && !exists($$opts{vcf_file}) ) { $$opts{vcf_file}=$arg; next; }
         error("Unknown parameter \"$arg\". Run -h for help.\n");
     }
+
+    if ( $$opts{iupac} )
+    {
+        delete($$opts{iupac});
+        $$opts{iupac}{CT} = 'Y';
+        $$opts{iupac}{TC} = 'Y';
+        $$opts{iupac}{AG} = 'R';
+        $$opts{iupac}{GA} = 'R';
+        $$opts{iupac}{AT} = 'W';
+        $$opts{iupac}{TA} = 'W';
+        $$opts{iupac}{GC} = 'S';
+        $$opts{iupac}{CG} = 'S';
+        $$opts{iupac}{TG} = 'K';
+        $$opts{iupac}{GT} = 'K';
+        $$opts{iupac}{CA} = 'M';
+        $$opts{iupac}{AC} = 'M';
+        $$opts{iupac}{AA} = 'A';
+        $$opts{iupac}{CC} = 'C';
+        $$opts{iupac}{GG} = 'G';
+        $$opts{iupac}{TT} = 'T';
+    }
+
     if ( exists($$opts{haplotype}) && !exists($$opts{sample}) ) { error("Expected -s option with -H.\n"); }
     return $opts;
 }
@@ -70,10 +94,21 @@ sub do_consensus
     {
         if ( $line=~/^>([^:\s]+)/ ) 
         {
-            flush_fa_buffer($opts,0);
             $chr = $1;
+
+            for my $line (@{$$vcf{buffer}}) { apply_variant($opts,$line); }
+            flush_fa_buffer($opts,0);
+
             my $rest = $';
-            $$opts{fa_pos} = ($rest=~/^:(\d+)-\d+$/) ? $1 : 1;
+            if ( $rest=~/^:(\d+)-\d+$/ )
+            {
+                print STDERR "Looks as fasta file snippet, the sequence $chr starts at position $1\n";
+                $$opts{fa_pos} = $1;
+            }
+            else
+            {
+                $$opts{fa_pos} = 1;
+            }
             $$opts{fa_idx} = 0;
             $$opts{fa_frz} = 0;
             if ( exists($chrs{$chr}) ) { $chrs{$chr}=1; }
@@ -149,8 +184,15 @@ sub apply_variant
     my $alt;
     if ( !exists($$opts{sample_col}) )
     {
+        # No sample requested, applying all sites, first ALT
         my $idx;
         $alt = ($idx=index($$vline[4],','))==-1 ? $$vline[4] : substr($$vline[4],0,$idx);
+        if ( exists($$opts{iupac}) && length($$vline[3])==1 && length($alt)==1 )
+        {
+            $alt = uc($$vline[3].$alt);
+            if ( !exists($$opts{iupac}{$alt}) ) { error("No IUPAC code for \"$alt\"\n"); }
+            $alt = $$opts{iupac}{$alt};
+        }
     }
     else
     {
@@ -168,14 +210,42 @@ sub apply_variant
         }
         else
         {
-            for my $al (@als)
+            if ( exists($$opts{iupac}) && length($$vline[3])==1 )   # only for SNPs and with -i
             {
-                if ( $al eq '0' ) { next; }
-                $alt = $$opts{vcf}->get_field($$vline[4],$al-1,',');
-                last;
+                my @alts;
+                for my $al (@als)
+                {
+                    if ( $al eq '.' ) { last; }
+                    if ( $al eq '0' ) { push @alts,uc($$vline[3]); }
+                    else
+                    {
+                        $alt = $$opts{vcf}->get_field($$vline[4],$al-1,',');
+                        push @alts, uc($alt);
+                        if ( length($alt)!=1 ) { last; }
+                    }
+                }
+                if ( @alts==2 )
+                {
+                    if ( !exists($$opts{iupac}{$alts[0].$alts[1]}) ) { error("No IUPAC code for \"$alts[0]/$alts[1]\"\n"); }
+                    $alt = $$opts{iupac}{$alts[0].$alts[1]};
+                }
+                elsif ( length($alts[0])==1 )
+                {
+                    if ( !exists($$opts{iupac}{$alts[0].$alts[0]}) ) { error("No IUPAC code for \"$alts[0]/$alts[0]\"\n"); }
+                    $alt = $$opts{iupac}{$alts[0].$alts[0]};
+                }
+            }
+            else
+            {
+                for my $al (@als)
+                {
+                    if ( $al eq '0' or $al eq '.' ) { next; }
+                    $alt = $$opts{vcf}->get_field($$vline[4],$al-1,',');
+                    last;
+                }
             }
         }
-        if ( !defined $alt ) { return; }
+        if ( !defined $alt or $alt eq $$vline[3] ) { return; }
     } 
 
     if ( $$vline[1] <= $$opts{fa_frz} )
