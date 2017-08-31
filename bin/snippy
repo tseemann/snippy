@@ -154,7 +154,7 @@ while (my $seq = $in->next_seq) {
   $out->write_seq($seq);
   $nseq++;
   for my $f ($seq->get_SeqFeatures) {
-    next if $f->primary_tag =~ m/^(source|misc_feature|gene)$/;
+    next if $f->primary_tag =~ m/^(source|misc_feature|gene|RBS)$/;
     $f->source_tag($EXE);
     # it seems to be writeing phase=1 (aka frame) instead of 0 (0-based)
     # i suspect it is using /codon_start= incorrectly (1-based) !!!
