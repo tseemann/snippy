@@ -8,9 +8,10 @@ use Time::Seconds;
 use File::Path qw(make_path remove_tree);
 use File::Spec;
 use File::Copy;
-#use File::Slurp;
+use File::Slurp;
 use Bio::SeqIO;
 use Bio::Tools::GFF;
+use Cwd;
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # global variables
@@ -25,6 +26,10 @@ my $OPSYS = $^O;
 my $t0 = localtime;
 my $MIN_FREEBAYES_CHUNK_SIZE = 1000;
 my $FAKE_READ_LEN = 250;
+
+# for the logfile later on
+my $ORIGDIR = getcwd;
+my @CMDLINE = ($0, @ARGV);  
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # command line options
@@ -289,12 +294,14 @@ if ($ctgs) {
 # run the commands
 
 my $log_file = "$prefix.log";
+write_file( $log_file, "### cd $ORIGDIR\n\n### @CMDLINE\n" );
 
 for my $cmd (@cmd) {
   # put section in logfile
-  open my $logfh, '>>', $log_file;
-  print $logfh "\n### ", $cmd, "\n\n";
-  close $logfh;
+  append_file( $log_file, "\n### $cmd\n\n" );
+#  open my $logfh, '>>', $log_file;
+#  print $logfh "\n### ", $cmd, "\n\n";
+#  close $logfh;
   # run it
   $cmd .= " 2>> $log_file";
   msg("Running: $cmd");
