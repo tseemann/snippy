@@ -85,7 +85,7 @@ Extension | Description
 .filt.vcf | The filtered variant calls from Freebayes
 .log | A log file with the commands run and their outputs
 .consensus.fa | A version of the reference genome with all variants instantiated
-.aligned.fa | A version of the reference but with `-` at position with `depth=0` and `N` for `0 < depth < --minfrac` (**does not have variants**)
+.aligned.fa | A version of the reference but with `-` at position with `depth=0` and `N` for `0 < depth < --mincov` (**does not have variants**)
 .depth.gz | Output of ```samtools depth``` for the .bam file
 .depth.gz.tbi | Index for the .depth.gz (_currently unused_)
 
@@ -260,16 +260,16 @@ Snippy is free software, released under the GPL (version 3).
 Please submit suggestions and bug reports here: https://github.com/tseemann/snippy/issues
 
 ## Requirements
-* Perl >= 5.6
-* BioPerl >= 1.6
+* Perl >= 5.6 
+* Perl Modules: Time::Piece, File::Slurp, Bioperl >= 1.6
 * bwa mem >= 0.7.12 
 * samtools >= 1.3
 * GNU parallel > 2013xxxx
-* freebayes >= 0.9.20 
+* freebayes >= 1.1
 * freebayes sripts (freebayes-parallel, fasta_generate_regions.py)
 * vcflib (vcfstreamsort, vcfuniq, vcffirstheader)
 * vcftools (vcf-consensus)
-* snpEff >= 4.1
+* snpEff >= 4.3
 
 ## Bundled binaries
-For Linux (compiled on Centos 5) and Mac OS X all the binaries, JARs and scripts are included. 
+For Linux (compiled on Centos 7) and Mac OS X (compiled on Sierra Brew) all the binaries, JARs and scripts are included. 
