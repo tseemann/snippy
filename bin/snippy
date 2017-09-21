@@ -543,9 +543,9 @@ sub setOptions {
     {OPT=>"bwaopt=s",  VAR=>\$bwaopt, DEFAULT=>'',  DESC=>"Extra BWA MEM options, eg. -x pacbio"},
   );
 
-  (!@ARGV) && (usage());
+  (!@ARGV) && (usage(1));
 
-  &GetOptions(map {$_->{OPT}, $_->{VAR}} grep { ref } @Options) || usage();
+  &GetOptions(map {$_->{OPT}, $_->{VAR}} grep { ref } @Options) || usage(1);
 
   # Now setup default values.
   foreach (@Options) {
@@ -558,6 +558,11 @@ sub setOptions {
 #----------------------------------------------------------------------
 
 sub usage {
+  my($exitcode) = @_;
+  $exitcode = 0 if $exitcode eq 'help'; # what gets passed by getopt func ref
+  $exitcode ||= 0;
+  select STDERR if $exitcode; # write to STDERR if exitcode is error
+
   print STDERR "Synopsis:\n  $EXE $VERSION - $SYNOPSIS\n",
                "Author:\n  $AUTHOR\n",
                "Usage:\n",  
@@ -582,7 +587,7 @@ sub usage {
       print STDERR "$_\n";
     }      
   }
-  exit(1);
+  exit($exitcode);
 }
 
 #----------------------------------------------------------------------
