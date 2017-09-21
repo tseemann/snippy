@@ -327,7 +327,7 @@ for my $id (keys %refseq) {
 open my $depth_fh, '-|', "bgzip -c -d \Q$prefix.depth.gz";
 while (<$depth_fh>) {
   my($seqid, $pos, $cov) = split m/\t/;
-  my $new = $cov < $mincov ? 'N' : substr($refseq{$seqid}, $pos-1, 1);
+  my $new = $cov <= 0 ? '-' : $cov < $mincov ? 'N' : substr($refseq{$seqid}, $pos-1, 1);
   substr $masked{$seqid}, $pos-1, 1, $new;
 }
 close $depth_fh;
