@@ -1,0 +1,16 @@
+language: perl
+
+sudo: false
+
+perl:
+    - "5.14"
+    
+install:
+    - "cpanm --quiet --notest Bio::Perl Time::Piece File::Slurp List::Util File::Copy File::Spec"
+    - "export PATH=$PWD/bin:$PATH"
+
+script:
+    - "snippy --version"
+    - "snippy --help"
+    - "snippy --citation"
+    - "! snippy --doesnotexist"
