@@ -11,7 +11,7 @@ use Bio::SeqIO;
 
 my $REF = 'Reference';
 
-my(@Options, $quiet, $verbose, $inprefix, $noref, $prefix, $aformat, $tformat);
+my(@Options, $quiet, $verbose, $inprefix, $noref, $prefix, $ref, $aformat, $tformat);
 setOptions();
 
 my $anno;
@@ -31,7 +31,16 @@ for my $dir (@ARGV) {
   add_snippy($id, $dir, $noref);
   # load the reference genome for first time through loop
   if (not keys %refseq) {
-    my $in = Bio::SeqIO->new(-file=>"$dir/reference/ref.fa", -format=>'fasta');
+    my $ref_use = '';
+    if (-r $ref) {
+       $ref_use = $ref;
+       msg("Using provided reference: $ref_use");
+    } 
+    else {
+      $ref_use = "$dir/reference/ref.fa";
+      msg("Using reference discovered in Snippy folder: $ref_use");
+    }
+    my $in = Bio::SeqIO->new(-file=>$ref_use, -format=>'fasta');
     while (my $s = $in->next_seq) {
       $refseq{ $s->id } = $s->seq;
       $gapseq{ $s->id } = '-'x($s->length);
@@ -268,6 +277,7 @@ sub setOptions {
     {OPT=>"verbose!",   VAR=>\$verbose,   DEFAULT=>0 , DESC=>"Verbose output"},
     {OPT=>"inprefix=s", VAR=>\$inprefix,  DEFAULT=>'snps' , DESC=>"Preferred input prefix of Snippy files"},
     {OPT=>"prefix=s",   VAR=>\$prefix,    DEFAULT=>'core' , DESC=>"Output file prefix"},
+    {OPT=>"ref=s",      VAR=>\$ref,       DEFAULT=>'' , DESC=>"Reference genome (try to find in Snippy folder otherwise)"},
     {OPT=>"noref!",     VAR=>\$noref,     DEFAULT=>0 , DESC=>"Exclude reference"},
     {OPT=>"aformat=s",  VAR=>\$aformat,   DEFAULT=>'fasta' , DESC=>"Output alignment format: nexus fasta phylip maf clustalw ..."},
   );
