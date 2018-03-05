@@ -47,6 +47,11 @@ core.aln core.tab core.txt
 
 # Installation
 
+## Conda
+Install [Conda](https://conda.io/docs/) or [Miniconda](https://conda.io/miniconda.html):
+
+    conda -c bioconda install snippy
+
 ## Homebrew
 Install [HomeBrew](http://brew.sh/) (Mac OS X) or [LinuxBrew](http://brew.sh/linuxbrew/) (Linux).
 
