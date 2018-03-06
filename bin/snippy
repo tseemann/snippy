@@ -81,7 +81,7 @@ sub parse_version {
   my $blob = join '', <$VER>;
   #msg("parse=[$blob]");
   $blob =~ $re;
-  my $ver = $1;
+  my $ver = $1 || 0;
   err("Need $cmd >= $min - please upgrade it.") if $ver < $min;
   msg("Checking version: $cmd is >= $min - ok, have $ver");
   return $ver;
