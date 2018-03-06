@@ -34,7 +34,7 @@ my @CMDLINE = ($0, @ARGV);
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # command line options
 
-my(@Options, $quiet, $force, $outdir, $prefix, 
+my(@Options, $quiet, $check, $force, $outdir, $prefix,
              $reference, $cpus, 
              $pe1, $pe2, $se, $peil, $ctgs, $unmapped,
              $report, $mapqual, $basequal,
@@ -77,7 +77,7 @@ for my $exe (qw(bwa samtools tabix bgzip snpEff java gzip
 
 sub parse_version {
   my($cmd, $min, $re) = @_;
-  open my $VER, '-|', $cmd;
+  open my $VER, '-|', $cmd.' 2>&1';  # combine stderr+stdout
   my $blob = join '', <$VER>;
   #msg("parse=[$blob]");
   $blob =~ $re;
@@ -86,9 +86,15 @@ sub parse_version {
   msg("Checking version: $cmd is >= $min - ok, have $ver");
   return $ver;
 }
-parse_version( 'samtools --version',  1.3, qr/samtools\s(\d+\.\d+)/ );
-parse_version( 'freebayes --version', 1.1, qr/\sv(\d+\.\d+)/        );
-parse_version( 'snpEff -version',     4.3, qr/(\d+\.\d+)/           );
+parse_version( 'samtools --version',  1.3, qr/samtools\s(\d+\.\d+)/ms );
+parse_version( 'freebayes --version', 1.1, qr/\sv(\d+\.\d+)/ms        );
+parse_version( 'snpEff -version',     4.3, qr/(\d+\.\d+)/ms           );
+
+# quit now if --check was provided
+if ($check) {
+  msg("Dependences look good!");
+  exit(0);
+}
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # type check parameters
@@ -521,6 +527,7 @@ sub setOptions {
     {OPT=>"help",    VAR=>\&usage,             DESC=>"This help"},
     {OPT=>"version", VAR=>\&version,           DESC=>"Print version and exit"},
     {OPT=>"citation",VAR=>\&show_citation,     DESC=>"Print citation for referencing $EXE"},
+    {OPT=>"check!",  VAR=>\$check,             DESC=>"Check dependences are installed then exit"},
     {OPT=>"quiet!",  VAR=>\$quiet, DEFAULT=>0, DESC=>"No screen output"},
     {OPT=>"cpus=i",  VAR=>\$cpus, DEFAULT=>8,  DESC=>"Maximum number of CPU cores to use"},
     {OPT=>"reference=s",  VAR=>\$reference, DEFAULT=>'',  DESC=>"Reference genome. Supports FASTA, GenBank, EMBL (not GFF)"},

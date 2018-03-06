@@ -13,4 +13,5 @@ script:
     - "snippy --version"
     - "snippy --help"
     - "snippy --citation"
+    - "snippy --check"
     - "! snippy --doesnotexist"
