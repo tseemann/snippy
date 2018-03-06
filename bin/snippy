@@ -77,12 +77,12 @@ for my $exe (qw(bwa samtools tabix bgzip snpEff java gzip
 
 sub parse_version {
   my($cmd, $min, $re) = @_;
-  open my $VER, '-|', $cmd.' 2>&1' or err("Could not run '$cmd'");
+  open my $VER, '-|', $cmd.' 2>&1' or err("Could not open pipe to '$cmd'");
   my $blob = join '', <$VER>;
-  err("Could not read output of '$cmd'") if not defined $blob;
+  err("Could not read output of '$cmd'") unless $blob;
   #msg("parse=[$blob]");
   $blob =~ $re;
-  my $ver = $1 || 0;
+  my $ver = defined $1 ? $1 : 0;
   err("Need $cmd >= $min - please upgrade it.") if $ver < $min;
   msg("Checking version: $cmd is >= $min - ok, have $ver");
   return $ver;

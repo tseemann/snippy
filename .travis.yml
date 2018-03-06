@@ -5,19 +5,14 @@ sudo: false
 perl:
     - "5.14"
 
-addons:
-    apt:
-        packages:
-            - zlib1g-dev
-            - gzip
-    
 install:
     - "cpanm --quiet --notest Bio::Perl Time::Piece File::Slurp List::Util File::Copy File::Spec"
     - "export PATH=$PWD/bin:$PATH"
 
 script:
+    - "ldd $PWD/binaries/linux/freebayes"
+    - "snippy --check"
     - "snippy --version"
     - "snippy --help"
     - "snippy --citation"
-    - "snippy --check"
     - "! snippy --doesnotexist"
