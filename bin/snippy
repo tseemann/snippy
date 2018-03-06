@@ -77,8 +77,9 @@ for my $exe (qw(bwa samtools tabix bgzip snpEff java gzip
 
 sub parse_version {
   my($cmd, $min, $re) = @_;
-  open my $VER, '-|', $cmd.' 2>&1';  # combine stderr+stdout
+  open my $VER, '-|', $cmd.' 2>&1' or err("Could not run '$cmd'");
   my $blob = join '', <$VER>;
+  err("Could not read output of '$cmd'") if not defined $blob;
   #msg("parse=[$blob]");
   $blob =~ $re;
   my $ver = $1 || 0;
