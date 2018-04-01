@@ -369,9 +369,10 @@ while (<$depth_fh>) {
   substr $masked{$seqid}, $pos-1, 1, $new;
 }
 close $depth_fh;
+
 my $afa_fh = Bio::SeqIO->new(-file=>">$afa_fn", -format=>'fasta');
 for my $id (sort keys %masked) {
-  $afa_fh->write_seq( Bio::Seq->new(-id=>$id, -seq=>$masked{$id}) );
+  $afa_fh->write_seq( Bio::Seq->new(-id=>$id, -seq=>$masked{$id}, -alphabet=>'dna') );
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
