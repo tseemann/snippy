@@ -132,11 +132,19 @@ del  | Deletion | ACGG => ACG
 complex | Combination of snp/mnp | ATTC => GTTA
 
 ## The variant caller
-The variant calling is done by [Freebayes](https://github.com/ekg/freebayes). However, Snippy uses a very simple model for reporting variants, relying on two main options:
+
+The variant calling is done by
+[Freebayes](https://github.com/ekg/freebayes).  
+
+If you wish to force more traditional cutoffs you can use these two options:
+
 * ```--mincov``` is the minimum number of reads covering the variant position.
 * ```--minfrac``` is the minimum proportion of those reads which must differ from the reference.
 
-By default Snippy uses ```--mincov 10 --minfrac 0.9``` which is reasonable for most cases, but for very high coverage data you may get mixed populations such as (REF:310 ALT:28). Snippy may use a more statistical approach in future versions like [Nesoni](https://github.com/Victorian-Bioinformatics-Consortium/nesoni) does.
+Snippy versions prior to 4.x used `--mincov 10 --micfrac 0.9` but this was removed in
+Snippy 4.x, which now relies primarily on the Freebayes statistical models to find homozygous
+variants of high probability. This increases true-positives and helps capture variants
+in extreme GC regions where Illumina coverage can drop below 10x.
 
 # Core SNP phylogeny
 
@@ -157,8 +165,19 @@ Extension | Description
 ----------|--------------
 .aln | A core SNP alignment in the ```--aformat``` format (default FASTA)
 .full.aln | A whole genome SNP alignment (includes invariant sites)
-.tab | Tab-separated columnar list of core SNP sites with alleles and annotations
+.nway.tab | Tab-separated columnar list of core SNP sites with alleles and annotations
 .txt | Tab-separated columnar list of alignment/core-size statistics
+
+## Advanced Options
+* If you want to mask certain regions of the genome, you can provide a BED file
+  with the `--mask` parameter. Any SNPs in those regions will be excluded. This
+  is common for genomes like *M.tuberculosis* where pesky repetitive PE/PPE/PGRS
+  gebes cause false positives.
+* If you use the `snippy --cleanup` option the reference files will be deleted.
+  This means `snippy-core` can not "auto-find" the reference. In this case you
+  simply use `snippy-core --reference REF` to provide the reference in FASTA format.
+* If you want to exclude the reference genome from the alignment, 
+  use `snippy-core --noref`.
 
 # Advanced usage
 
@@ -268,10 +287,10 @@ Snippy is free software, released under the GPL (version 3).
 Please submit suggestions and bug reports here: https://github.com/tseemann/snippy/issues
 
 ## Requirements
-* Perl >= 5.6 
+* Perl >= 5.12
 * Perl Modules: Time::Piece, File::Slurp, Bioperl >= 1.6
 * bwa mem >= 0.7.12 
-* samtools >= 1.3
+* samtools >= 1.7
 * GNU parallel > 2013xxxx
 * freebayes >= 1.1
 * freebayes sripts (freebayes-parallel, fasta_generate_regions.py)
@@ -280,4 +299,6 @@ Please submit suggestions and bug reports here: https://github.com/tseemann/snip
 * snpEff >= 4.3
 
 ## Bundled binaries
-For Linux (compiled on Centos 7) and Mac OS X (compiled on Sierra Brew) all the binaries, JARs and scripts are included. 
+
+For Linux (compiled on Centos 7) and Mac OS X (compiled on Sierra Brew) all
+the binaries, JARs and scripts are included.
