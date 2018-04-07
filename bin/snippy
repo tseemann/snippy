@@ -66,8 +66,8 @@ $ENV{PATH} = "$BINDIR:"
 
 for my $exe (qw(bwa bcftools samtools snpEff java gzip samclip
                 parallel freebayes freebayes-parallel fasta_generate_regions.py 
-                vcfstreamsort vcfuniq vcffirstheader vcf-consensus
-                snippy-vcf_to_tab snippy-vcf_report snippy-vcf_filter)) {
+                vcfstreamsort vcfuniq vcffirstheader
+                snippy-vcf_to_tab snippy-vcf_report)) {
   my($which) = qx(which $exe 2> /dev/null);
   $which or err("Can not find required '$exe' in PATH");
   chomp $which;
@@ -287,7 +287,7 @@ my @cmd = (
   "samtools faidx $refdir/ref.fa",
   ( $bam ? () : "bwa index $refdir/ref.fa" ),
   "mkdir $refdir/genomes && cp -f $refdir/ref.fa $refdir/genomes/ref.fa",
-  "mkdir $refdir/ref && bgzip -c $refdir/ref.gff > $refdir/ref/genes.gff.gz",
+  "mkdir $refdir/ref && gzip -c $refdir/ref.gff > $refdir/ref/genes.gff.gz",
   ( $nfeat > 0 ? "snpEff build -c $refdir/snpeff.config -dataDir . -gff3 ref" 
                : () ),
   ($bam ? "samtools view -h -O SAM \Q$bam\E" : "bwa mem $bwaopt -t $cpus $refdir/ref.fa @reads")
@@ -298,29 +298,16 @@ my @cmd = (
     ." | samtools markdup $sort_temp -r -s - -"
     ." > $prefix.bam",
   "samtools index $prefix.bam",
-#  "samtools depth -aa -q $basequal $prefix.bam | bgzip > $prefix.depth.gz",
-#  "tabix -s 1 -b 2 -e 2 $prefix.depth.gz",
 
   "fasta_generate_regions.py $refdir/ref.fa.fai $chunk_size > $refdir/ref.txt",
   "freebayes-parallel $refdir/ref.txt $cpus $fbopt -f $refdir/ref.fa $prefix.bam > $prefix.raw.vcf",
-#   "freebayes $fbopt -f $refdir/ref.fa $prefix.bam > $prefix.raw.vcf",
 
-#  "vcffilter -f 'DP > $min_DP' -f 'QUAL > 10' $prefix.raw.vcf > $prefix.filt.vcf",
-#  "$BINDIR/snippy-vcf_filter --minqual 10 --mincov $mincov --minfrac $minfrac  $prefix.raw.vcf > $prefix.filt.vcf",
   "bcftools view --include '$bcf_filter' -Ov -o $prefix.filt.vcf $prefix.raw.vcf",
 
   ( $nfeat > 0 ? "snpEff ann -no-downstream -no-upstream -no-intergenic -no-utr -c $refdir/snpeff.config -dataDir . -noStats ref $prefix.filt.vcf > $prefix.vcf" 
                : "cp $prefix.filt.vcf $prefix.vcf" ),
-#  "bgzip -c $prefix.vcf > $prefix.vcf.gz",
-#  "tabix -p vcf $prefix.vcf.gz",
   "$BINDIR/snippy-vcf_to_tab --gff $refdir/ref.gff --ref $refdir/ref.fa --vcf $prefix.vcf > $prefix.tab",
-#  "vcf-consensus $prefix.vcf.gz < $refdir/ref.fa > $prefix.consensus.fa",
-#  "vcffilter -f 'TYPE = snp' --or -f 'TYPE = mnp' $prefix.filt.vcf > $prefix.filt.subs.vcf",
-#  "$BINDIR/snippy-vcf_filter --subs $prefix.filt.vcf > $prefix.filt.subs.vcf",
   "bcftools view --types snps,mnps -Ov -o $prefix.filt.subs.vcf $prefix.filt.vcf"
-#  "bgzip -c $prefix.filt.subs.vcf > $prefix.filt.subs.vcf.gz",
-#  "tabix -p vcf $prefix.filt.subs.vcf.gz",
-#  "vcf-consensus $prefix.filt.subs.vcf.gz < $refdir/ref.fa > $prefix.consensus.subs.fa",
 );
 
 if ($unmapped) {
