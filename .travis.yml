@@ -17,7 +17,8 @@ addons:
 install:
     - "cpanm --quiet --notest Bio::Perl Time::Piece File::Slurp List::Util"
     - "export PATH=$PWD/bin:$PATH"
-    - "ln -s /lib/x86_64-linux-gnu/libcrypto.so.1.0.0 /lib/x86_64-linux-gnu/libcrypto.so.10"
+    - "ln -s /lib/x86_64-linux-gnu/libcrypto.so.1.0.0 libcrypto.so.10"
+    - "export LD_LIBRARY_PATH=$PWD:"
 
 script:
     - "ldd $PWD/binaries/linux/freebayes | grep 'not found'"
