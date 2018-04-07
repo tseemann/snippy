@@ -18,10 +18,11 @@ install:
 
 script:
     - "ldd $PWD/binaries/linux/freebayes"
-    - "ldd $PWD/binaries/linux/samtools"
     - "ldd $PWD/binaries/linux/vcfuniq"
-    - "snippy --check"
+    - "ldd $PWD/binaries/linux/samtools"
+    - "ldd $PWD/binaries/linux/bcftools"
     - "snippy --version"
     - "snippy --help"
+    - "snippy --check"
     - "snippy --citation"
     - "! snippy --doesnotexist"
