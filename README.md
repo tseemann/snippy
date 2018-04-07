@@ -91,7 +91,8 @@ Extension | Description
 .raw.vcf | The unfiltered variant calls from Freebayes
 .filt.vcf | The filtered variant calls from Freebayes
 .log | A log file with the commands run and their outputs
-.consensus.fa | A version of the reference genome with all variants instantiated
+.consensus.fa | A version of the reference genome with *all* variants instantiated
+.consensus.subs.fa | A version of the reference genome with *only substitution* variants instantiated
 .aligned.fa | A version of the reference but with `-` at position with `depth=0` and `N` for `0 < depth < --mincov` (**does not have variants**)
 .depth.gz | Output of ```samtools depth``` for the .bam file
 .depth.gz.tbi | Index for the .depth.gz (_currently unused_)
