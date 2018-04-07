@@ -7,6 +7,7 @@ use Time::Piece;
 use Time::Seconds;
 use File::Path qw(make_path remove_tree);
 use File::Spec;
+use File::Basename;
 use File::Copy;
 use File::Slurp;
 use Bio::SeqIO;
@@ -16,11 +17,12 @@ use Cwd;
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # global variables
 
+my $VERSION = "4.0-dev";
 my $EXE = $FindBin::RealScript;
 my $BINDIR = $FindBin::RealBin;
-my $VERSION = "3.2-dev";
+my $APPDIR = dirname($FindBin::RealBin);
 my $SYNOPSIS = "fast bacterial variant calling from NGS reads";
-my $AUTHOR = 'Torsten Seemann <torsten.seemann@gmail.com>';
+my $AUTHOR = 'Torsten Seemann';
 my $URL = 'https://github.com/tseemann/snippy';
 my $OPSYS = $^O;
 my $t0 = localtime;
@@ -35,8 +37,8 @@ my @CMDLINE = ($0, @ARGV);
 # command line options
 
 my(@Options, $quiet, $check, $force, $outdir, $prefix,
-             $reference, $cpus, 
-             $pe1, $pe2, $se, $peil, $ctgs, $unmapped,
+             $reference, $cpus, $tmpdir, $ram,
+             $bam, $pe1, $pe2, $se, $peil, $ctgs, $unmapped,
              $report, $mapqual, $basequal,
              $mincov, $minfrac, $rgid, $bwaopt,
              $cleanup);
@@ -56,13 +58,13 @@ msg("Detected operating system: $OPSYS");
 msg("Enabling bundled $OPSYS tools.");
 $ENV{PATH} = "$BINDIR:"
              .$ENV{PATH}
-             .":$BINDIR/../binaries/$OPSYS"
-             .":$BINDIR/../binaries/noarch";
+             .":$APPDIR/binaries/$OPSYS"
+             .":$APPDIR/binaries/noarch";
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # check for needed exes
 
-for my $exe (qw(bwa samtools tabix bgzip snpEff java gzip
+for my $exe (qw(bwa bcftools samtools snpEff java gzip samclip
                 parallel freebayes freebayes-parallel fasta_generate_regions.py 
                 vcfstreamsort vcfuniq vcffirstheader vcf-consensus
                 snippy-vcf_to_tab snippy-vcf_report snippy-vcf_filter)) {
@@ -83,11 +85,12 @@ sub parse_version {
   #msg("parse=[$blob]");
   $blob =~ $re;
   my $ver = defined $1 ? $1 : 0;
-  err("Need $cmd >= $min - please upgrade it.") if $ver < $min;
+  err("Need $cmd >= $min but you have $ver - please upgrade it.") if $ver < $min;
   msg("Checking version: $cmd is >= $min - ok, have $ver");
   return $ver;
 }
-parse_version( 'samtools --version',  1.3, qr/samtools\s(\d+\.\d+)/ms );
+parse_version( 'samtools --version',  1.7, qr/samtools\s(\d+\.\d+)/ms );
+parse_version( 'bcftools --version',  1.7, qr/bcftools\s(\d+\.\d+)/ms );
 parse_version( 'freebayes --version', 1.1, qr/\sv(\d+\.\d+)/ms        );
 parse_version( 'snpEff -version',     4.3, qr/(\d+\.\d+)/ms           );
 
@@ -112,19 +115,26 @@ msg("Treating reference as '$ref_fmt' format.");
 $cpus > 0 or err("Invalid --cpus $cpus");
 msg("Will use $cpus CPU cores.");
 
-($pe1 or $pe2 or $se or $peil or $ctgs) 
-  or err("No read files specified. Use --pe1/--pe2 or --se or --peil or --ctgs");
+($pe1 or $pe2 or $se or $peil or $ctgs or $bam) 
+  or err("No read files specified. Use --pe1/--pe2 or --se or --peil or --ctgs or --bam");
 
-($pe1 && $pe2) xor $se xor $peil xor $ctgs
-  or err("Can not mix read file types. Either (1) --pe1 and --pe2 (2) --se (3) --peil (4) --ctgs");
+($pe1 && $pe2) xor $se xor $peil xor $ctgs xor $bam
+  or err("Can not mix read file types. Either (1) --R1 (2) --se (3) --peil (4) --ctgs (5) --bam");
 
 my @reads;
-for my $readfn ($pe1, $pe2, $se, $peil, $ctgs) {
-  next unless $readfn;
-  -r $readfn or err("Can not read sequence file: $readfn");
-  push @reads, File::Spec->rel2abs($readfn);
+if ($bam) {
+  $bam = File::Spec->rel2abs($bam);
+  -r $bam or err("Can not read BAM '$bam'");
+  msg("Using BAM file '$bam' instead of aligning reads.");
 }
-msg("Using read file: $_") for @reads;
+else {
+  for my $readfn ($pe1, $pe2, $se, $peil, $ctgs) {
+    next unless $readfn;
+    -r $readfn or err("Can not read sequence file: $readfn");
+    push @reads, File::Spec->rel2abs($readfn);
+  }
+  msg("Using read file: $_") for @reads;
+}
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # prepare output folder
@@ -171,7 +181,7 @@ while (my $seq = $in->next_seq) {
     $f->source_tag($EXE);
     # it seems to be writeing phase=1 (aka frame) instead of 0 (0-based)
     # i suspect it is using /codon_start= incorrectly (1-based) !!!
-    $f->frame(0);
+#    $f->frame(0);
     if ($f->has_tag('locus_tag')) {
       my($id) = $f->get_tag_values('locus_tag');
       $f->add_tag_value('ID', $id);
@@ -192,7 +202,7 @@ msg("Wrote $nfeat features to ref.gff");
 
 if ($ctgs) {
   msg("Shredding $reads[0] into pseudo-reads");
-  my $FAKE_READ_COV = 2 * $mincov;
+  my $FAKE_READ_COV = 20;
   # we halve the coverage as we will take 2 reads for each stride (fwd + rev)
   my $stride = $FAKE_READ_LEN / (0.5 * $FAKE_READ_COV);
   my $counter=0;
@@ -243,7 +253,7 @@ if ($nfeat > 0) {
 # divide the reference into chunks to parallel freebayes processing
 
 my $refsize = -s "$refdir/ref.fa";  # rough size in bases
-my $num_chunks = $cpus * 4; # oversample by 4 for run-time variation
+my $num_chunks = 1 + 2*($cpus-1); # oversample a bit for run-time variation but 1 for --cpus 1
 my $chunk_size = max( $MIN_FREEBAYES_CHUNK_SIZE, int( $refsize / $num_chunks ) ); # bases per chunk
 msg("Freebayes will process $num_chunks chunks of $chunk_size bp, $cpus chunks at a time.");
 
@@ -253,47 +263,72 @@ msg("Freebayes will process $num_chunks chunks of $chunk_size bp, $cpus chunks a
 $rgid ||= $prefix;
 msg("Using BAM RG (Read Group) ID: $rgid");
 
-$bwaopt .= qq{ -v 2 -M -R '\@RG\\tID:$rgid\\tSM:$rgid'};
+$bwaopt .= qq{ -Y -M -R '\@RG\\tID:$rgid\\tSM:$rgid'};
 $bwaopt .= ' -p' if $peil;
 
-my $fbopt = "-p 1 -q $basequal -m $mapqual --min-coverage $mincov -V";
+my $fbopt = "-p 2 -P 0.5 -q $basequal -m $mapqual"
+#          ." --no-partial-observations"
+#          ." --haplotype-length 0"
+           ." --min-repeat-entropy 1.0"
+           ;
 
-# if we don't want unmapped reads, be ruthless and discard anything remotely  unuseful
-my $FILTER = $unmapped ? "" : "samtools view -u -T $refdir/ref.fa -F 3844 -q $mapqual |";
+my $sort_temp = "-T $tmpdir/snippy.$$.";
+my $sort_cpus = min($cpus, 8);
+my $sort_ram = "-m ".sprintf("%dM", 1000*$ram/$sort_cpus);
+$sort_cpus = "--threads $sort_cpus";
+my $sortopt = "-l 0 $sort_temp $sort_cpus $sort_ram";
+
+my $bcf_filter = qq{GT="1/1" && DP>=$mincov && AF>=$minfrac};
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # prepare the commands
 
 my @cmd = (
   "samtools faidx $refdir/ref.fa",
-  "bwa index $refdir/ref.fa",
+  ( $bam ? () : "bwa index $refdir/ref.fa" ),
   "mkdir $refdir/genomes && cp -f $refdir/ref.fa $refdir/genomes/ref.fa",
   "mkdir $refdir/ref && bgzip -c $refdir/ref.gff > $refdir/ref/genes.gff.gz",
   ( $nfeat > 0 ? "snpEff build -c $refdir/snpeff.config -dataDir . -gff3 ref" 
                : () ),
-  "(bwa mem $bwaopt -t $cpus $refdir/ref.fa @reads | $FILTER samtools sort --reference $refdir/ref.fa > $prefix.bam)",
+  ($bam ? "samtools view -h -O SAM \Q$bam\E" : "bwa mem $bwaopt -t $cpus $refdir/ref.fa @reads")
+    ." | samclip --ref $refdir/ref.fa.fai"
+    ." | samtools sort -n $sortopt"
+    ." | samtools fixmate -m - -"
+    ." | samtools sort $sortopt"
+    ." | samtools markdup $sort_temp -r -s - -"
+    ." > $prefix.bam",
   "samtools index $prefix.bam",
-  "samtools depth -aa -q $basequal $prefix.bam | bgzip > $prefix.depth.gz",
-  "tabix -s 1 -b 2 -e 2 $prefix.depth.gz",
+#  "samtools depth -aa -q $basequal $prefix.bam | bgzip > $prefix.depth.gz",
+#  "tabix -s 1 -b 2 -e 2 $prefix.depth.gz",
+
   "fasta_generate_regions.py $refdir/ref.fa.fai $chunk_size > $refdir/ref.txt",
   "freebayes-parallel $refdir/ref.txt $cpus $fbopt -f $refdir/ref.fa $prefix.bam > $prefix.raw.vcf",
+#   "freebayes $fbopt -f $refdir/ref.fa $prefix.bam > $prefix.raw.vcf",
+
 #  "vcffilter -f 'DP > $min_DP' -f 'QUAL > 10' $prefix.raw.vcf > $prefix.filt.vcf",
-  "$BINDIR/snippy-vcf_filter --minqual 10 --mincov $mincov --minfrac $minfrac  $prefix.raw.vcf > $prefix.filt.vcf",
+#  "$BINDIR/snippy-vcf_filter --minqual 10 --mincov $mincov --minfrac $minfrac  $prefix.raw.vcf > $prefix.filt.vcf",
+  "bcftools view --include '$bcf_filter' -Ov -o $prefix.filt.vcf $prefix.raw.vcf",
+
   ( $nfeat > 0 ? "snpEff ann -no-downstream -no-upstream -no-intergenic -no-utr -c $refdir/snpeff.config -dataDir . -noStats ref $prefix.filt.vcf > $prefix.vcf" 
                : "cp $prefix.filt.vcf $prefix.vcf" ),
-  "bgzip -c $prefix.vcf > $prefix.vcf.gz",
-  "tabix -p vcf $prefix.vcf.gz",
+#  "bgzip -c $prefix.vcf > $prefix.vcf.gz",
+#  "tabix -p vcf $prefix.vcf.gz",
   "$BINDIR/snippy-vcf_to_tab --gff $refdir/ref.gff --ref $refdir/ref.fa --vcf $prefix.vcf > $prefix.tab",
-  "vcf-consensus $prefix.vcf.gz < $refdir/ref.fa > $prefix.consensus.fa",
+#  "vcf-consensus $prefix.vcf.gz < $refdir/ref.fa > $prefix.consensus.fa",
 #  "vcffilter -f 'TYPE = snp' --or -f 'TYPE = mnp' $prefix.filt.vcf > $prefix.filt.subs.vcf",
-  "$BINDIR/snippy-vcf_filter --subs $prefix.filt.vcf > $prefix.filt.subs.vcf",
-  "bgzip -c $prefix.filt.subs.vcf > $prefix.filt.subs.vcf.gz",
-  "tabix -p vcf $prefix.filt.subs.vcf.gz",
-  "vcf-consensus $prefix.filt.subs.vcf.gz < $refdir/ref.fa > $prefix.consensus.subs.fa",
+#  "$BINDIR/snippy-vcf_filter --subs $prefix.filt.vcf > $prefix.filt.subs.vcf",
+  "bcftools view --types snps,mnps -Ov -o $prefix.filt.subs.vcf $prefix.filt.vcf"
+#  "bgzip -c $prefix.filt.subs.vcf > $prefix.filt.subs.vcf.gz",
+#  "tabix -p vcf $prefix.filt.subs.vcf.gz",
+#  "vcf-consensus $prefix.filt.subs.vcf.gz < $refdir/ref.fa > $prefix.consensus.subs.fa",
 );
 
 if ($unmapped) {
-  push @cmd, "(samtools view -u -b -f 12 $prefix.bam | samtools bam2fq - | gzip -1 > $prefix.unmapped.fastq.gz)";
+  push @cmd, "samtools fastq -f 12 -v 20 -@ 3 -c 5 -N"
+            ." -s $prefix.unmapped_SE.fq.gz"
+            ." -0 $prefix.unmapped_R0.fq.gz"
+            ." -1 $prefix.unmapped_R1.fq.gz -2 $prefix.unmapped_R2.fq.gz"
+            ." $prefix.bam"
 }
 
 if ($ctgs) {
@@ -325,22 +360,27 @@ for my $cmd (@cmd) {
 #   . if coverage < mindepth add "N"
 #   . else add "[AGTC]" as appropriate (*** but NOT the SNPS ***)
 
+
 my $afa_fn = "$prefix.aligned.fa";
 msg("Generating aligned/masked FASTA relative to reference: $afa_fn");
 my %masked;
 for my $id (keys %refseq) {
   $masked{$id} = '-'x(length($refseq{$id})); 
 }
-open my $depth_fh, '-|', "bgzip -c -d \Q$prefix.depth.gz";
+#  "samtools depth -aa -q $basequal $prefix.bam | bgzip > $prefix.depth.gz",
+#open my $depth_fh, '-|', "bgzip -c -d \Q$prefix.depth.gz";
+open my $depth_fh, '-|', "samtools depth -aa -q $basequal $prefix.bam";
 while (<$depth_fh>) {
   my($seqid, $pos, $cov) = split m/\t/;
+  # if mincov=0 (AUTO) then it will allow everything except depth=0
   my $new = $cov <= 0 ? '-' : $cov < $mincov ? 'N' : substr($refseq{$seqid}, $pos-1, 1);
   substr $masked{$seqid}, $pos-1, 1, $new;
 }
 close $depth_fh;
+
 my $afa_fh = Bio::SeqIO->new(-file=>">$afa_fn", -format=>'fasta');
 for my $id (sort keys %masked) {
-  $afa_fh->write_seq( Bio::Seq->new(-id=>$id, -seq=>$masked{$id}) );
+  $afa_fh->write_seq( Bio::Seq->new(-id=>$id, -seq=>$masked{$id}, -alphabet=>'dna') );
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -528,23 +568,26 @@ sub setOptions {
     {OPT=>"help",    VAR=>\&usage,             DESC=>"This help"},
     {OPT=>"version", VAR=>\&version,           DESC=>"Print version and exit"},
     {OPT=>"citation",VAR=>\&show_citation,     DESC=>"Print citation for referencing $EXE"},
-    {OPT=>"check!",  VAR=>\$check,             DESC=>"Check dependences are installed then exit"},
+    {OPT=>"check!",  VAR=>\$check, DEFAULT=>0, DESC=>"Check dependences are installed then exit"},
     {OPT=>"quiet!",  VAR=>\$quiet, DEFAULT=>0, DESC=>"No screen output"},
     {OPT=>"cpus=i",  VAR=>\$cpus, DEFAULT=>8,  DESC=>"Maximum number of CPU cores to use"},
+    {OPT=>"ram=i",   VAR=>\$ram, DEFAULT=>8,  DESC=>"Try and keep RAM under this many GB"},
+    {OPT=>"tmpdir=s",  VAR=>\$tmpdir, DEFAULT=>$ENV{TMPDIR}||'/tmp', DESC=>"Fast temporary storage eg. local SSD"},
     {OPT=>"reference=s",  VAR=>\$reference, DEFAULT=>'',  DESC=>"Reference genome. Supports FASTA, GenBank, EMBL (not GFF)"},
     {OPT=>"outdir=s",  VAR=>\$outdir, DEFAULT=>'',  DESC=>"Output folder"},
     {OPT=>"prefix=s",  VAR=>\$prefix, DEFAULT=>'snps',  DESC=>"Prefix for output files"},
     {OPT=>"force!",  VAR=>\$force, DEFAULT=>0,  DESC=>"Force overwrite of existing output folder"},
-    {OPT=>"pe1|R1|left=s",  VAR=>\$pe1, DEFAULT=>'', DESC=>"Reads, paired-end R1 (left)"},
-    {OPT=>"pe2|R2|right=s",  VAR=>\$pe2, DEFAULT=>'', DESC=>"Reads, paired-end R2 (right)"},
+    {OPT=>"bam=s",  VAR=>\$bam, DEFAULT=>'', DESC=>"Use this BAM file instead of aligning reads"},
+    {OPT=>"R1|pe1|left=s",  VAR=>\$pe1, DEFAULT=>'', DESC=>"Reads, paired-end R1 (left)"},
+    {OPT=>"R2|pe2|right=s",  VAR=>\$pe2, DEFAULT=>'', DESC=>"Reads, paired-end R2 (right)"},
     {OPT=>"se|single=s",  VAR=>\$se, DEFAULT=>'', DESC=>"Single-end reads"},
     {OPT=>"ctgs|contigs=s",  VAR=>\$ctgs, DEFAULT=>'', DESC=>"Don't have reads use these contigs"},
     {OPT=>"peil=s",  VAR=>\$peil, DEFAULT=>'', DESC=>"Reads, paired-end R1/R2 interleaved"},
     {OPT=>"unmapped!",  VAR=>\$unmapped, DEFAULT=>0,  DESC=>"Keep unmapped reads in BAM and write FASTQ"},
     {OPT=>"mapqual=i",  VAR=>\$mapqual, DEFAULT=>60,  DESC=>"Minimum read mapping quality to consider"},
-    {OPT=>"basequal=i",  VAR=>\$basequal, DEFAULT=>20,  DESC=>"Minimum base quality to consider"},
-    {OPT=>"mincov=i",  VAR=>\$mincov, DEFAULT=>10,  DESC=>"Minimum coverage of variant site"},
-    {OPT=>"minfrac=f",  VAR=>\$minfrac, DEFAULT=>0.9,  DESC=>"Minumum proportion for variant evidence"},
+    {OPT=>"basequal=i",  VAR=>\$basequal, DEFAULT=>13,  DESC=>"Minimum base quality to consider"},
+    {OPT=>"mincov=i",  VAR=>\$mincov, DEFAULT=>0,  DESC=>"Minimum coverage of variant site, 0=AUTO"},
+    {OPT=>"minfrac=f",  VAR=>\$minfrac, DEFAULT=>0,  DESC=>"Minumum proportion for variant evidence, 0=AUTO"},
     {OPT=>"report!",  VAR=>\$report, DEFAULT=>0,  DESC=>"Produce long report with visual alignment (slow)"},
     {OPT=>"cleanup!",  VAR=>\$cleanup, DEFAULT=>0,  DESC=>"Remove most files not needed for snippy-core (inc. BAMs)"},
     {OPT=>"rgid=s",  VAR=>\$rgid, DEFAULT=>'',  DESC=>"Use this \@RG ID: in the BAM header"},

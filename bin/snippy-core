@@ -8,10 +8,12 @@ use Bio::AlignIO;
 use Bio::LocatableSeq;
 use Data::Dumper;
 use Bio::SeqIO;
+use File::Basename;
 
 my $REF = 'Reference';
 
-my(@Options, $quiet, $verbose, $inprefix, $noref, $prefix, $ref, $aformat, $tformat);
+my(@Options, $quiet, $verbose, $inprefix, $noref,
+             $prefix, $ref, $aformat, $tformat, $bedfile);
 setOptions();
 
 my $anno;
@@ -21,6 +23,26 @@ my %dir_of;
 my %refseq;
 my %gapseq;
 my $reflen;
+
+my %mask;
+if ($bedfile) {
+  msg("Loading BED file: $bedfile");
+  -r $bedfile or err("Can't read --mask BED file: $bedfile");
+  my $regions=0;
+  open my $BED, '<', $bedfile;
+  while (<$BED>) {
+    next if m/^#/;
+    chomp;
+    my(@x) = split m/\t/;
+    next unless @x >= 3;
+    $x[1] =~ m/^\d+$/ or err("Bad BED start coordinate: $_");
+    $x[2] =~ m/^\d+$/ or err("Bad BED end coordinate: $_");
+    $mask{$x[0]} = { START=>$x[1], END=>$x[2]+1 };
+    $regions++;
+  }
+  msg("Read $regions regions from BED file to mask SNPs from");
+}
+print Dumper(\%mask) if $verbose;
 
 msg("Loading Snippy folders");
 for my $dir (@ARGV) {
@@ -86,9 +108,19 @@ for my $id (@id) {
 
 msg("Patching variant sites into whole genome alignment...");
 my $patched=0;
+my $masked=0;
 for my $seq (sort { $a cmp $b } keys %$snp) {
   for my $pos (sort { $a <=> $b } keys %{$snp->{$seq}}) {
     msg("Patched $patched so far... (currently at $seq:$pos)") if ++$patched % 10_000 == 0;
+
+    # don't include SNPs in the mask regions
+    if ($bedfile and exists $mask{$seq} and $pos >= $mask{$seq}{'START'} and $pos <= $mask{$seq}{'END'}) {
+      msg("Skipping $seq:$pos from BED mask") if $verbose;
+      delete $snp->{$seq}{$pos};  # IMPORTANT!
+      $masked++;
+      next;
+    }
+
     my $var = $snp->{$seq}{$pos};    
 #    for my $id (keys %$var) {
 #      substr $aln{$id}{$seq}, $pos-1, 1, $var->{$id};
@@ -152,7 +184,8 @@ for my $seq (sort keys %$snp) {
                );
   }
 }
-msg("Found $ncore core SNPs from $nsites variant sites.");
+
+msg("Found $ncore core SNPs ($masked masked) from $nsites variants (snp,mnp,complex)");
 msg("Saved SNP table: $table_fn");
 
 my $core_aln = save_hash_alignment(\%valn, "$prefix.aln", $aformat);
@@ -246,7 +279,7 @@ sub add_snippy {
     $num++;
   }
   close SNPS;
-  msg("$id: found $num variants totalling $len bp in $snp_file");
+  msg("$id: found $num variants (snp,mnp,complex) totalling $len bp in $snp_file");
 }
 
 #----------------------------------------------------------------------
@@ -280,6 +313,7 @@ sub setOptions {
     {OPT=>"ref=s",      VAR=>\$ref,       DEFAULT=>'' , DESC=>"Reference genome (try to find in Snippy folder otherwise)"},
     {OPT=>"noref!",     VAR=>\$noref,     DEFAULT=>0 , DESC=>"Exclude reference"},
     {OPT=>"aformat=s",  VAR=>\$aformat,   DEFAULT=>'fasta' , DESC=>"Output alignment format: nexus fasta phylip maf clustalw ..."},
+    {OPT=>"mask=s",     VAR=>\$bedfile,  DEFAULT=>'' , DESC=>"BED file of regions to exclude"},
   );
 
   (!@ARGV) && (usage());
@@ -295,9 +329,10 @@ sub setOptions {
 }
 
 sub usage {
+  my $exe = basename($0);
   print STDERR "Synopsis:\n  Combine multiple Snippy folders into a core SNP alignment\n";
   print STDERR "Usage:\n";
-  print STDERR "  $0 [options] [--noref] snippyDir1/ snippyDir2/ snippyDir3/ ...\n";
+  print STDERR "  $exe [options] [--noref] snippyDir1/ snippyDir2/ snippyDir3/ ...\n";
   print STDERR "Options:\n";
   foreach (@Options) {
     printf STDERR "  --%-13s %s%s.\n",$_->{OPT},$_->{DESC},
