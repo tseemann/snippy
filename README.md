@@ -95,8 +95,6 @@ Extension | Description
 .csv | A [comma-separated](http://en.wikipedia.org/wiki/Comma-separated_values) version of the .tab file
 .html | A [HTML](http://en.wikipedia.org/wiki/HTML) version of the .tab file
 .vcf | The final annotated variants in [VCF](http://en.wikipedia.org/wiki/Variant_Call_Format) format
-.vcf.gz | Compressed .vcf file via [BGZIP](http://blastedbio.blogspot.com.au/2011/11/bgzf-blocked-bigger-better-gzip.html) 
-.vcf.gz.tbi | Index for the .vcf.gz via [TABIX](http://bioinformatics.oxfordjournals.org/content/27/5/718.full)
 .bed | The variants in [BED](http://genome.ucsc.edu/FAQ/FAQformat.html#format1) format
 .gff | The variants in [GFF3](http://www.sequenceontology.org/gff3.shtml) format
 .bam | The alignments in [BAM](http://en.wikipedia.org/wiki/SAMtools) format. Note that multi-mapping and unmapped reads are not present.
@@ -104,9 +102,16 @@ Extension | Description
 .raw.vcf | The unfiltered variant calls from Freebayes
 .filt.vcf | The filtered variant calls from Freebayes
 .log | A log file with the commands run and their outputs
+.aligned.fa | A version of the reference but with `-` at position with `depth=0` and `N` for `0 < depth < --mincov` (**does not have variants**)
+
+Previous Snippy 3.x versions also produced:
+
+Extension | Description
+----------|--------------
+.vcf.gz | Compressed .vcf file via [BGZIP](http://blastedbio.blogspot.com.au/2011/11/bgzf-blocked-bigger-better-gzip.html) 
+.vcf.gz.tbi | Index for the .vcf.gz via [TABIX](http://bioinformatics.oxfordjournals.org/content/27/5/718.full)
 .consensus.fa | A version of the reference genome with *all* variants instantiated
 .consensus.subs.fa | A version of the reference genome with *only substitution* variants instantiated
-.aligned.fa | A version of the reference but with `-` at position with `depth=0` and `N` for `0 < depth < --mincov` (**does not have variants**)
 .depth.gz | Output of ```samtools depth``` for the .bam file
 .depth.gz.tbi | Index for the .depth.gz (_currently unused_)
 
@@ -121,7 +126,9 @@ REF | The nucleotide(s) in the reference
 ALT | The alternate nucleotide(s) supported by the reads
 EVIDENCE | Frequency counts for REF and ALT
 
-If you supply a Genbank file as the ```--reference``` rather than a FASTA file, Snippy will fill in these extra columns by using the genome annotation to tell you which feature was affected by the variant:
+If you supply a Genbank file as the `--reference` rather than a FASTA
+file, Snippy will fill in these extra columns by using the genome annotation
+to tell you which feature was affected by the variant:
 
 Name | Description
 -----|------------
@@ -129,10 +136,10 @@ FTYPE | Class of feature affected: CDS tRNA rRNA ...
 STRAND | Strand the feature was on: + - .
 NT_POS | Nucleotide position of the variant withinthe feature / Length in nt
 AA_POS | Residue position / Length in aa (only if FTYPE is CDS)
-LOCUS_TAG | The ```/locus_tag``` of the feature (if it existed)
-GENE | The ```/gene``` tag of the feature (if it existed)
-PRODUCT | The ```/product``` tag of the feature (if it existed)
-EFFECT | The ```snpEff``` annotated consequence of this variant
+LOCUS_TAG | The `/locus_tag` of the feature (if it existed)
+GENE | The `/gene` tag of the feature (if it existed)
+PRODUCT | The `/product` tag of the feature (if it existed)
+EFFECT | The `snpEff` annotated consequence of this variant (ANN tag in .vcf)
 
 ## Variant Types
 
@@ -316,14 +323,13 @@ Please submit suggestions and bug reports to the
 * bwa mem >= 0.7.12 
 * samtools >= 1.7
 * bcftools >= 1.7
-* GNU parallel > 2013xxxx
-* freebayes >= 1.1
-* freebayes sripts (freebayes-parallel, fasta_generate_regions.py)
-* vcflib (vcfstreamsort, vcfuniq, vcffirstheader)
-* vcftools (vcf-consensus)
+* GNU parallel >= 2013xxxx
+* freebayes >= 1.1 (freebayes, freebayes-parallel, fasta_generate_regions.py)
+* vcflib >= 1.0 (vcfstreamsort, vcfuniq, vcffirstheader)
 * snpEff >= 4.3
+* samclip >= 0.2
 
 ## Bundled binaries
 
-For Linux (compiled on Centos 7) and macOS (compiled on High Sierra Brew) all
+For Linux (compiled on Ubuntu 16.04 LTS) and macOS (compiled on High Sierra Brew) all
 the binaries, JARs and scripts are included.
