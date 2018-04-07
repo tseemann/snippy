@@ -7,6 +7,7 @@ use Time::Piece;
 use Time::Seconds;
 use File::Path qw(make_path remove_tree);
 use File::Spec;
+use File::Basename;
 use File::Copy;
 use File::Slurp;
 use Bio::SeqIO;
@@ -16,9 +17,10 @@ use Cwd;
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # global variables
 
+my $VERSION = "4.0-dev";
 my $EXE = $FindBin::RealScript;
 my $BINDIR = $FindBin::RealBin;
-my $VERSION = "4.0-dev";
+my $APPDIR = dirname($FindBin::RealBin);
 my $SYNOPSIS = "fast bacterial variant calling from NGS reads";
 my $AUTHOR = 'Torsten Seemann';
 my $URL = 'https://github.com/tseemann/snippy';
@@ -56,8 +58,8 @@ msg("Detected operating system: $OPSYS");
 msg("Enabling bundled $OPSYS tools.");
 $ENV{PATH} = "$BINDIR:"
              .$ENV{PATH}
-             .":$BINDIR/../binaries/$OPSYS"
-             .":$BINDIR/../binaries/noarch";
+             .":$APPDIR/binaries/$OPSYS"
+             .":$APPDIR/binaries/noarch";
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # check for needed exes
@@ -83,7 +85,7 @@ sub parse_version {
   #msg("parse=[$blob]");
   $blob =~ $re;
   my $ver = defined $1 ? $1 : 0;
-  err("Need $cmd >= $min - please upgrade it.") if $ver < $min;
+  err("Need $cmd >= $min but you have $ver - please upgrade it.") if $ver < $min;
   msg("Checking version: $cmd is >= $min - ok, have $ver");
   return $ver;
 }
