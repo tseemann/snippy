@@ -27,7 +27,7 @@ bigtest:  genome.fa reads_R1.fq.gz reads_R2.fq.gz
 
 genome.fa: 
 	curl http://ftp.ebi.ac.uk/pub/databases/ena/wgs/public/cv/CVOW01.fasta.gz \
-		| gunzip > $@
+		| gunzip | sed -e 's/ENA|CVOW01000001|//' > $@
 
 reads_R1.fq.gz:
 	curl ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR115/006/SRR1157476/SRR1157476_1.fastq.gz \
