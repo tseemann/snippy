@@ -11,20 +11,16 @@ addons:
             - libstdc++6
             - liblzma5
             - libbz2-1.0
-            - libssl-dev
-            - libssl1.0.0
 
 install:
     - "cpanm --quiet --notest Bio::Perl Time::Piece File::Slurp List::Util"
     - "export PATH=$PWD/bin:$PATH"
-    - "ln -s /lib/x86_64-linux-gnu/libcrypto.so.1.0.0 libcrypto.so.10"
-    - "export LD_LIBRARY_PATH=$PWD:"
 
 script:
-    - "ldd $PWD/binaries/linux/freebayes | grep 'not found'"
-    - "ldd $PWD/binaries/linux/vcfuniq | grep 'not found'"
-    - "ldd $PWD/binaries/linux/samtools | grep 'not found'"
-    - "ldd $PWD/binaries/linux/bcftools | grep 'not found'"
+    - "! (ldd $PWD/binaries/linux/freebayes | grep 'not found')"
+    - "! (ldd $PWD/binaries/linux/vcfuniq   | grep 'not found')"
+    - "! (ldd $PWD/binaries/linux/samtools  | grep 'not found')"
+    - "! (ldd $PWD/binaries/linux/bcftools  | grep 'not found')"
     - "snippy --version"
     - "! snippy --doesnotexist"
     - "snippy --help"
