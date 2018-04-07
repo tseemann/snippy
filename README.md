@@ -49,23 +49,36 @@ core.aln core.tab core.txt
 
 ## Conda
 Install [Conda](https://conda.io/docs/) or [Miniconda](https://conda.io/miniconda.html):
-
-    conda -c bioconda install snippy
+```
+conda -c bioconda install snippy
+```
 
 ## Homebrew
 Install [HomeBrew](http://brew.sh/) (Mac OS X) or [LinuxBrew](http://brew.sh/linuxbrew/) (Linux).
-
-    brew tap homebrew/science
-    brew tap tseemann/homebrew-bioinformatics-linux
-    brew install snippy
-    snippy --help
+```
+brew untap homebrew/science
+brew tap brewsci/bio/snippy
+brew install snippy  # COMING SOON!
+```
 
 ## Source
-This will install the latest version direct from Github. You'll need to add the ```bin``` directory to your PATH.
+This will install the latest version direct from Github. 
+You'll need to add the `bin` directory to your `$PATH`.
+```
+cd $HOME
+git clone https://github.com/tseemann/snippy.git
+$HOME/bin/snippy --help
+```
 
-    cd $HOME
-    git clone https://github.com/tseemann/snippy.git
-    $HOME/snippy/bin/snippy --help
+# Check installation
+Ensure you have the latest version:
+```
+snippy --version
+```
+Check that all dependencies are installed and working:
+```
+snippy --check
+```
 
 # Calling SNPs
 
@@ -138,8 +151,8 @@ The variant calling is done by
 
 If you wish to force more traditional cutoffs you can use these two options:
 
-* ```--mincov``` is the minimum number of reads covering the variant position.
-* ```--minfrac``` is the minimum proportion of those reads which must differ from the reference.
+* `--mincov` is the minimum number of reads covering the variant position.
+* `--minfrac` is the minimum proportion of those reads which must differ from the reference.
 
 Snippy versions prior to 4.x used `--mincov 10 --micfrac 0.9` but this was removed in
 Snippy 4.x, which now relies primarily on the Freebayes statistical models to find homozygous
