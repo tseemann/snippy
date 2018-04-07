@@ -11,6 +11,7 @@ addons:
             - libstdc++6
             - liblzma5
             - libbz2-1.0
+            - libssl-dev
 
 install:
     - "cpanm --quiet --notest Bio::Perl Time::Piece File::Slurp List::Util File::Copy File::Spec"
