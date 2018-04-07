@@ -42,7 +42,7 @@ Loaded 4 SNP tables.
 Found 2814 core SNPs from 96615 SNPs.
 
 % ls core.*
-core.aln core.tab core.txt
+core.aln core.tab core.nway.tab core.txt core.vcf
 ```
 
 # Installation
@@ -177,18 +177,20 @@ be different ("polymorphic" or "variant").  If we ignore the complications
 of "ins", "del" variant types, and just use variant sites, these are the "core SNP genome".
 
 ## Input Requirements
-* a set of Snippy folders which used the same ``--ref`` sequence.
+* a set of Snippy folders which used the same `--ref` sequence.
 
 ## Output Files
 
 Extension | Description
 ----------|--------------
-.aln | A core SNP alignment in the ```--aformat``` format (default FASTA)
+.aln | A core SNP alignment in the `--aformat` format (default FASTA)
 .full.aln | A whole genome SNP alignment (includes invariant sites)
-.nway.tab | Tab-separated columnar list of core SNP sites with alleles and annotations
+.tab | Tab-separated columnar list of **core** SN sites with alleles and annotations
+.nway.tab | Tab-separated columnar list of **all** SNP sites with alleles and annotations
+.vcf | Multi-sample VCF file with genotype `GT` tags for all discovered alleles
 .txt | Tab-separated columnar list of alignment/core-size statistics
 
-## Advanced Options
+## Options
 * If you want to mask certain regions of the genome, you can provide a BED file
   with the `--mask` parameter. Any SNPs in those regions will be excluded. This
   is common for genomes like *M.tuberculosis* where pesky repetitive PE/PPE/PGRS
