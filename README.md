@@ -278,19 +278,31 @@ snps.unmapped.fastq.gz ....
 # Information
 
 ## Etymology
-The name Snippy is a combination of [SNP](http://en.wikipedia.org/wiki/Single-nucleotide_polymorphism) (pronounced "snip") , [snappy](http://www.thefreedictionary.com/snappy) (meaning "quick") and [Skippy the Bush Kangaroo](http://en.wikipedia.org/wiki/Skippy_the_Bush_Kangaroo) (to represent its Australian origin)
+
+The name Snippy is a combination of
+[SNP](http://en.wikipedia.org/wiki/Single-nucleotide_polymorphism)
+(pronounced "snip") , [snappy](http://www.thefreedictionary.com/snappy)
+(meaning "quick") and [Skippy the Bush
+Kangaroo](http://en.wikipedia.org/wiki/Skippy_the_Bush_Kangaroo) (to
+represent its Australian origin)
 
 ## License
-Snippy is free software, released under the GPL (version 3).
+
+Snippy is free software, released under the 
+[GPL (version 2)](https://raw.githubusercontent.com/tseemann/snippy/master/LICENSE).
 
 ## Issues
-Please submit suggestions and bug reports here: https://github.com/tseemann/snippy/issues
+
+Please submit suggestions and bug reports to the 
+[Issue Tracker](https://github.com/tseemann/snippy/issues)
 
 ## Requirements
+
 * Perl >= 5.12
 * Perl Modules: Time::Piece, File::Slurp, Bioperl >= 1.6
 * bwa mem >= 0.7.12 
 * samtools >= 1.7
+* bcftools >= 1.7
 * GNU parallel > 2013xxxx
 * freebayes >= 1.1
 * freebayes sripts (freebayes-parallel, fasta_generate_regions.py)
@@ -300,5 +312,5 @@ Please submit suggestions and bug reports here: https://github.com/tseemann/snip
 
 ## Bundled binaries
 
-For Linux (compiled on Centos 7) and Mac OS X (compiled on Sierra Brew) all
+For Linux (compiled on Centos 7) and macOS (compiled on High Sierra Brew) all
 the binaries, JARs and scripts are included.
