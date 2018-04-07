@@ -25,3 +25,5 @@ script:
     - "! snippy --doesnotexist"
     - "snippy --help"
     - "snippy --check"
+    - "make -C test"
+
