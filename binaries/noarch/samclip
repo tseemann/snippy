@@ -10,7 +10,7 @@ use Data::Dumper;
 # globals
 
 my $EXE = basename($0);
-my $VERSION = "0.1.0";
+my $VERSION = "0.2";
 my $AUTHOR = 'Torsten Seemann (@torstenseemann)';
 my $HOMEPAGE = "https://github.com/tseemann/samclip";
 
@@ -26,10 +26,11 @@ use constant {
 #----------------------------------------------------------------------
 # command line parameters
 
-my $max    = 5;
-my $ref    = '';
-my $invert = 0;
-my $debug  = 0;
+my $max      = 5;
+my $ref      = '';
+my $invert   = 0;
+my $debug    = 0;
+my $progress = 100_000;
 
 #----------------------------------------------------------------------
 sub usage {
@@ -43,11 +44,13 @@ sub usage {
     "  % samclip --ref ref.fa < in.sam > out.sam\n",
     "  % minimap2 ref.fa R1.fq R2.fq | samclip --ref ref.fa | samtools sort > out.bam\n",
     "OPTIONS\n",
-    "  --help        This help.\n",
-    "  --version     Print version and exit.\n",
-    "  --ref FASTA   Reference genome - needs FASTA.fai index.\n",
-    "  --invert      Output rejected SAM lines and ignore good ones.\n",
-    "  --debug       Print verbose debug info to stderr.\n",
+    "  --help         This help\n",
+    "  --version      Print version and exit\n",
+    "  --ref FASTA    Reference genome - needs FASTA.fai index\n",
+    "  --max NUM      Maximum clip length to allow (default=$max)\n",
+    "  --invert       Output rejected SAM lines and ignore good ones\n",
+    "  --debug        Print verbose debug info to stderr\n",
+    "  --progress N   Print progress every NUM records (default=$progress,none=0)\n",
     "HOMEPAGE\n  $HOMEPAGE\n",
     "";
   exit($exitcode);
@@ -63,8 +66,9 @@ GetOptions(
   "version"    => \&version,
   "ref=s"      => \$ref,
   "max=i"      => \$max,
-  "v"          => \$invert,
+  "invert"     => \$invert,
   "debug"      => \$debug,
+  "progress=i" => \$progress,
 ) or usage(1);
              
 $ref or err("Please supply reference genome with --ref");
@@ -97,6 +101,7 @@ while (my $line = <ARGV>) {
     next;
   }
   $total++;
+  msg("Processed $total records...") if $progress and $total % $progress == 0;
   my @sam = split m/\t/, $line;
   # do a quick 'clipped?' check before heavyweight parsing
   if ($sam[SAM_CIGAR] =~ /\d[SH]/) {
