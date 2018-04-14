@@ -50,7 +50,7 @@ core.aln core.tab core.nway.tab core.txt core.vcf
 ## Conda
 Install [Conda](https://conda.io/docs/) or [Miniconda](https://conda.io/miniconda.html):
 ```
-conda -c bioconda install snippy
+conda -c conda-forge -c bioconda install snippy
 ```
 
 ## Homebrew
@@ -63,7 +63,7 @@ brew install snippy  # COMING SOON!
 
 ## Source
 This will install the latest version direct from Github. 
-You'll need to add the `bin` directory to your `$PATH`.
+You'll need to add Prokka's `bin` directory to your `$PATH`.
 ```
 cd $HOME
 git clone https://github.com/tseemann/snippy.git
@@ -84,7 +84,7 @@ snippy --check
 
 ## Input Requirements
 * a reference genome in FASTA or GENBANK format (can be in multiple contigs)
-* sequence read files in FASTQ or FASTA format (can be .gz compressed) format
+* sequence read file(s) in FASTQ or FASTA format (can be .gz compressed) format
 * a folder to put the results in
 
 ## Output Files
