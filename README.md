@@ -57,8 +57,8 @@ conda -c conda-forge -c bioconda install snippy
 Install [HomeBrew](http://brew.sh/) (Mac OS X) or [LinuxBrew](http://brew.sh/linuxbrew/) (Linux).
 ```
 brew untap homebrew/science
-brew tap brewsci/bio/snippy
-brew install snippy  # COMING SOON!
+brew tap brewsci/bio
+brew install snippy # COMING SOON!
 ```
 
 ## Source
