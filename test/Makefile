@@ -10,7 +10,7 @@ MAKEFLAGS += --no-builtin-variables
 
 OPTS =
 SNIPPY = ../bin/snippy
-SNIPPYCORE = $(SNIPPY)-core
+SNIPPYCORE = $(SNIPPY)-core --verbose
 R1 = reads_R1.fastq.gz
 R2 = reads_R2.fastq.gz
 
@@ -19,15 +19,16 @@ REF=example.fna
 BED=example.bed
 
 all: core.txt
+	wc -l ?/snps.tab
 
 core.txt : A/snps.tab B/snps.tab C/snps.tab D/snps.tab
-	$(SNIPPYCORE) --prefix core --ref $(REF) A B C D
-	$(SNIPPYCORE) --prefix core-noref --ref $(REF) --noref A B C D
-	$(SNIPPYCORE) --prefix core-mask --ref $(REF) --mask $(BED) --verbose A B C D
+	$(SNIPPYCORE) --prefix core --ref $(REF) A B C D 2> core.log
+	$(SNIPPYCORE) --prefix core-noref --ref $(REF) --noref A B C D 2> core-noref.log
+	$(SNIPPYCORE) --prefix core-mask --ref $(REF) --mask $(BED) A B C D 2> core-mask.log
 
 %/snps.tab : %/R1.fq %/R2.fq
-	$(SNIPPY) --clean --force --ref $(REF) --outdir $(@D) --R1 $(word 1,$^) --R2 $(word 2,$^)
-	
+	$(SNIPPY) --force --ref $(REF) --outdir $(@D) --R1 $(word 1,$^) --R2 $(word 2,$^) 2> $(@D)/snippy.log
+
 %/R1.fq %/R2.fq : $(REF)
 	mkdir -p $(@D)
 	wgsim -S $(shell echo $(@D) | od -N 1 -i | head -n 1 | cut -c9-) \
@@ -53,6 +54,6 @@ reads_R2.fq.gz :
 		| gzip -d -c | seqtk sample 0.2 - | pigz -9 > $@
 
 clean :
-	rm -fr ./bigtest core.* ./{A..D}
+	rm -fr ./bigtest core*.* ./{A..D}
 
 	
