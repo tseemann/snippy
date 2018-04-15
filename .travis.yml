@@ -12,11 +12,12 @@ addons:
             - liblzma5
             - libbz2-1.0
             - samtools
-            - bioperl
             - emboss
 
 install:
+    - "cpanm --quiet --notest Bio::Perl"
     - "export PATH=$PWD/bin:$PATH"
+    - "ln -s $PWD/binaries/linux/samtools $PWD/bin/samtools"
 
 script:
     - "! (ldd $PWD/binaries/linux/freebayes | grep 'not found')"
