@@ -50,7 +50,7 @@ core.aln core.tab core.nway.tab core.txt core.vcf
 ## Conda
 Install [Conda](https://conda.io/docs/) or [Miniconda](https://conda.io/miniconda.html):
 ```
-conda -c conda-forge -c bioconda install snippy
+conda -c bioconda -c conda-forge install snippy
 ```
 
 ## Homebrew
