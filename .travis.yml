@@ -16,7 +16,7 @@ addons:
 
 install:
     - "cpanm --quiet --notest Bio::Perl"
-    - "curl https://downloads.sourceforge.net/project/samtools/samtools/1.0/samtools-bcftools-htslib-1.0_x64-linux.tar.bz2 | tar jxf -"
+    - "curl -L https://downloads.sourceforge.net/project/samtools/samtools/1.0/samtools-bcftools-htslib-1.0_x64-linux.tar.bz2 | tar jxf -"
     - "ln -s $PWD/samtools-bcftools-htslib-1.0_x64-linux/bin/wgsim $PWD/bin/wgsim"
     - "export PATH=$PWD/bin:$PATH"
 
