@@ -287,8 +287,8 @@ my $bcf_filter = qq{GT="1/1" && DP>=$mincov && AF>=$minfrac};
 my @cmd = (
   "samtools faidx $refdir/ref.fa",
   ( $bam ? () : "bwa index $refdir/ref.fa" ),
-  "mkdir $refdir/genomes && cp -f $refdir/ref.fa $refdir/genomes/ref.fa",
-  "mkdir $refdir/ref && gzip -c $refdir/ref.gff > $refdir/ref/genes.gff.gz",
+  "mkdir -p $refdir/genomes && cp -f $refdir/ref.fa $refdir/genomes/ref.fa",
+  "mkdir -p $refdir/ref && gzip -c $refdir/ref.gff > $refdir/ref/genes.gff.gz",
   ( $nfeat > 0 ? "snpEff build -c $refdir/snpeff.config -dataDir . -gff3 ref" 
                : () ),
   ($bam ? "samtools view -h -O SAM \Q$bam\E" : "bwa mem $bwaopt -t $cpus $refdir/ref.fa @reads")
