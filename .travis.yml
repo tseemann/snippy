@@ -11,13 +11,14 @@ addons:
             - libstdc++6
             - liblzma5
             - libbz2-1.0
-            - samtools
             - emboss
+            - curl
 
 install:
     - "cpanm --quiet --notest Bio::Perl"
+    - "curl https://downloads.sourceforge.net/project/samtools/samtools/1.0/samtools-bcftools-htslib-1.0_x64-linux.tar.bz2 | tar xf -"
+    - "ln -s $PWD/samtools-bcftools-htslib-1.0_x64-linux/bin/wgsim $PWD/bin/wgsim"
     - "export PATH=$PWD/bin:$PATH"
-    - "ln -s $PWD/binaries/linux/samtools $PWD/bin/samtools"
 
 script:
     - "! (ldd $PWD/binaries/linux/freebayes | grep 'not found')"
