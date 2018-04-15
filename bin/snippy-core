@@ -2,13 +2,13 @@
 use warnings;
 use strict;
 use Time::Piece;
+use Data::Dumper;
 use List::MoreUtils qw(uniq any);
+use File::Basename;
 use File::Spec;
+use Bio::SeqIO;
 use Bio::AlignIO;
 use Bio::LocatableSeq;
-use Data::Dumper;
-use Bio::SeqIO;
-use File::Basename;
 
 my $REF = 'Reference';
 
@@ -37,12 +37,19 @@ if ($bedfile) {
     next unless @x >= 3;
     $x[1] =~ m/^\d+$/ or err("Bad BED start coordinate: $_");
     $x[2] =~ m/^\d+$/ or err("Bad BED end coordinate: $_");
-    $mask{$x[0]} = { START=>$x[1], END=>$x[2]+1 };
+    # Convert BED to GFF style coordinates
+    push @{$mask{$x[0]}}, [ $x[1]+1, $x[2]+0 ]; # +0 forces numeric
     $regions++;
   }
   msg("Read $regions regions from BED file to mask SNPs from");
+
+  # We can exploit this to make masking quicker in is_masked()
+  msg("Sorting regions...");
+  for my $chr (keys %mask) {
+    $mask{$chr} = [ sort { $a->[0] <=> $b->[0] } @{$mask{$chr}} ];
+  }
 }
-print Dumper(\%mask) if $verbose;
+print Dumper(\%mask) if $bedfile && $verbose;
 
 msg("Loading Snippy folders");
 for my $dir (@ARGV) {
@@ -114,7 +121,7 @@ for my $seq (sort { $a cmp $b } keys %$snp) {
     msg("Patched $patched so far... (currently at $seq:$pos)") if ++$patched % 10_000 == 0;
 
     # don't include SNPs in the mask regions
-    if ($bedfile and exists $mask{$seq} and $pos >= $mask{$seq}{'START'} and $pos <= $mask{$seq}{'END'}) {
+    if ( $bedfile and is_masked(\%mask, $seq, $pos) ) {
       msg("Skipping $seq:$pos from BED mask") if $verbose;
       delete $snp->{$seq}{$pos};  # IMPORTANT!
       $masked++;
@@ -194,6 +201,24 @@ msg("Done.");
 
 #----------------------------------------------------------------------
 
+sub is_masked {
+  my($bed, $chr, $pos) = @_;
+  # any mask regions on this contig?
+  if (my $s = $bed->{$chr}) {
+    # loop over regions
+    for my $r (@$s) {
+      # is it in one of the ranges?
+      return 1 if $pos >= $r->[0] && $pos <= $r->[1];
+      # as ranges sorted, no need to continue on (OR NOT!)
+      #last if $pos >= $r->[1];
+    }
+  }
+  # otherwise return "no"
+  return;
+}
+
+#----------------------------------------------------------------------
+
 sub save_hash_alignment {
   my($aln, $outfile, $format) = @_;
   msg("Constructing alignment object for $outfile");
@@ -206,6 +231,7 @@ sub save_hash_alignment {
       Bio::LocatableSeq->new(
         -id    => $id,
         -seq   => $dna,
+        -alphabet => 'dna',
         -start => 1,
       )
     );
