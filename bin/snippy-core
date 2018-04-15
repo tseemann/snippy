@@ -49,7 +49,7 @@ if ($bedfile) {
     $mask{$chr} = [ sort { $a->[0] <=> $b->[0] } @{$mask{$chr}} ];
   }
 }
-print Dumper(\%mask) if $bedfile && $verbose;
+msg( Dumper(\%mask) ) if $bedfile && $verbose;
 
 msg("Loading Snippy folders");
 for my $dir (@ARGV) {
