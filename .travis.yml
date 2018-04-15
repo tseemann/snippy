@@ -3,7 +3,7 @@ language: perl
 sudo: false
 
 perl:
-    - "5.14"
+    - "5.26"
 
 addons:
     apt:
@@ -11,9 +11,11 @@ addons:
             - libstdc++6
             - liblzma5
             - libbz2-1.0
+            - samtools
+            - bioperl
+            - emboss
 
 install:
-    - "cpanm --quiet --notest Bio::Perl Time::Piece File::Slurp List::Util"
     - "export PATH=$PWD/bin:$PATH"
 
 script:
