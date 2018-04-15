@@ -9,7 +9,6 @@ use File::Path qw(make_path remove_tree);
 use File::Spec;
 use File::Basename;
 use File::Copy;
-use File::Slurp;
 use Bio::SeqIO;
 use Bio::Tools::GFF;
 use Cwd;
@@ -327,15 +326,20 @@ if ($ctgs) {
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # run the commands
 
+# use this so we don't depend on File::Slurp
+sub append_to_file {
+  my($fname, @lines) = @_;
+  open my $fh, '>>', $fname;
+  print $fh @lines;
+  close $fh;
+}
+
 my $log_file = "$prefix.log";
-write_file( $log_file, "### cd $ORIGDIR\n\n### @CMDLINE\n" );
+append_to_file($log_file, "### cd $ORIGDIR\n\n### @CMDLINE\n");
 
 for my $cmd (@cmd) {
   # put section in logfile
-  append_file( $log_file, "\n### $cmd\n\n" );
-#  open my $logfh, '>>', $log_file;
-#  print $logfh "\n### ", $cmd, "\n\n";
-#  close $logfh;
+  append_to_file($log_file, "\n### $cmd\n\n");
   # run it
   $cmd .= " 2>> $log_file";
   msg("Running: $cmd");
@@ -347,7 +351,6 @@ for my $cmd (@cmd) {
 #   . start with a sequence full of "-"
 #   . if coverage < mindepth add "N"
 #   . else add "[AGTC]" as appropriate (*** but NOT the SNPS ***)
-
 
 my $afa_fn = "$prefix.aligned.fa";
 msg("Generating aligned/masked FASTA relative to reference: $afa_fn");
