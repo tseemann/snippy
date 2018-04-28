@@ -116,7 +116,7 @@ $cpus > 0 or err("Invalid --cpus $cpus");
 msg("Will use $cpus CPU cores.");
 
 ($pe1 or $pe2 or $se or $peil or $ctgs or $bam) 
-  or err("No read files specified. Use --pe1/--pe2 or --se or --peil or --ctgs or --bam");
+  or err("No read files specified. Use --R1/--R2 or --se or --peil or --ctgs or --bam");
 
 ($pe1 && $pe2) xor $se xor $peil xor $ctgs xor $bam
   or err("Can not mix read file types. Either (1) --R1 (2) --se (3) --peil (4) --ctgs (5) --bam");
@@ -202,6 +202,7 @@ msg("Wrote $nfeat features to ref.gff");
 # if using contigs as fake High Quality FQ reads, tweak some settings
 
 if ($ctgs) {
+  # ideally we would use paftools.js or nucmer here instead
   msg("Shredding $reads[0] into pseudo-reads");
   my $FAKE_READ_COV = 20;
   # we halve the coverage as we will take 2 reads for each stride (fwd + rev)
