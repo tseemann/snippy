@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use FindBin;
+###LINE_FOR_BREW_CONDA###
 use List::Util qw(min max);
 use Time::Piece;
 use Time::Seconds;
