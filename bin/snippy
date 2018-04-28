@@ -17,7 +17,7 @@ use Cwd;
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # global variables
 
-my $VERSION = "4.0-dev";
+my $VERSION = "4.0-dev2";
 my $EXE = $FindBin::RealScript;
 my $BINDIR = $FindBin::RealBin;
 my $APPDIR = dirname($FindBin::RealBin);
@@ -40,7 +40,7 @@ my(@Options, $quiet, $check, $force, $outdir, $prefix,
              $reference, $cpus, $tmpdir, $ram,
              $bam, $pe1, $pe2, $se, $peil, $ctgs, $unmapped,
              $report, $mapqual, $basequal,
-             $mincov, $minfrac, $rgid, $bwaopt,
+             $mincov, $minfrac, $rgid, $bwaopt, $targets,
              $cleanup);
 setOptions();
 
@@ -111,6 +111,8 @@ $reference = File::Spec->rel2abs($reference);
 msg("Using reference: $reference");
 my $ref_fmt = guess_format($reference) or err("Could not guess format '$reference'");
 msg("Treating reference as '$ref_fmt' format.");
+
+$targets && !-r $targets and err("Could not read BED file --targets '$targets'");
 
 $cpus > 0 or err("Invalid --cpus $cpus");
 msg("Will use $cpus CPU cores.");
@@ -273,6 +275,7 @@ my $fbopt = "-p 2 -P 0.5 -q $basequal -m $mapqual"
 #          ." --haplotype-length 0"
            ." --min-repeat-entropy 1.0"
            ;
+$fbopt .= "-t '$targets'" if $targets;
 
 my $sort_temp = "-T $tmpdir/snippy.$$.";
 my $sort_cpus = min($cpus, 8);
@@ -571,6 +574,7 @@ sub setOptions {
     {OPT=>"prefix=s",  VAR=>\$prefix, DEFAULT=>'snps',  DESC=>"Prefix for output files"},
     {OPT=>"force!",  VAR=>\$force, DEFAULT=>0,  DESC=>"Force overwrite of existing output folder"},
     {OPT=>"bam=s",  VAR=>\$bam, DEFAULT=>'', DESC=>"Use this BAM file instead of aligning reads"},
+    {OPT=>"targets=s",  VAR=>\$targets, DEFAULT=>'', DESC=>"Only call SNPs from this BED file"},
     {OPT=>"R1|pe1|left=s",  VAR=>\$pe1, DEFAULT=>'', DESC=>"Reads, paired-end R1 (left)"},
     {OPT=>"R2|pe2|right=s",  VAR=>\$pe2, DEFAULT=>'', DESC=>"Reads, paired-end R2 (right)"},
     {OPT=>"se|single=s",  VAR=>\$se, DEFAULT=>'', DESC=>"Single-end reads"},
