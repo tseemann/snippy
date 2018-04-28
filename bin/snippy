@@ -615,14 +615,14 @@ sub usage {
   $exitcode ||= 0;
   select STDERR if $exitcode; # write to STDERR if exitcode is error
 
-  print STDERR "Synopsis:\n  $EXE $VERSION - $SYNOPSIS\n",
-               "Author:\n  $AUTHOR\n",
-               "Usage:\n",  
-               "  $EXE [options] --outdir <dir> --ref <ref> --pe1 <R1.fq.gz> --pe2 <R2.fq.gz>\n",
-               "  $EXE [options] --outdir <dir> --ref <ref> --se <454.fastq>\n",
-               "  $EXE [options] --outdir <dir> --ref <ref> --peil <interleaved.fa.gz>\n",
-               "  $EXE [options] --outdir <dir> --ref <ref> --ctgs <assembly.fasta>\n",
-               "";
+  print "Synopsis:\n  $EXE $VERSION - $SYNOPSIS\n",
+        "Author:\n  $AUTHOR\n",
+        "Usage:\n",
+        "  $EXE [options] --outdir <dir> --ref <ref> --pe1 <R1.fq.gz> --pe2 <R2.fq.gz>\n",
+        "  $EXE [options] --outdir <dir> --ref <ref> --se <454.fastq>\n",
+        "  $EXE [options] --outdir <dir> --ref <ref> --peil <interleaved.fa.gz>\n",
+        "  $EXE [options] --outdir <dir> --ref <ref> --ctgs <assembly.fasta>\n",
+        "";
 
   foreach (@Options) {
     if (ref) {
