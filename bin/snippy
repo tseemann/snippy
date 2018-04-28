@@ -264,7 +264,11 @@ msg("Freebayes will process $num_chunks chunks of $chunk_size bp, $cpus chunks a
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # prepare the command options
 
-$rgid ||= $prefix;
+unless ($rgid) {
+  my @dirs = File::Spec->splitdir($outdir);
+  $rgid = $dirs[-1];
+  #msg("RGID: dirs=[@dirs] rgid=$rgid");
+}
 msg("Using BAM RG (Read Group) ID: $rgid");
 
 $bwaopt .= qq{ -Y -M -R '\@RG\\tID:$rgid\\tSM:$rgid'};
