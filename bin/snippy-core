@@ -1,18 +1,30 @@
 #!/usr/bin/env perl
 use warnings;
 use strict;
+use FindBin;
+use lib "$FindBin::RealBin/../perl5";
+###LINE_FOR_BREW_CONDA###
+use Snippy::Version;
 use Time::Piece;
 use Data::Dumper;
 use List::MoreUtils qw(uniq any);
-use File::Basename;
 use File::Spec;
 use Bio::SeqIO;
 use Bio::AlignIO;
 use Bio::LocatableSeq;
 
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# global variables
+
+my $VERSION = Snippy::Version->version;
+my $EXE = $FindBin::RealScript;
+
 my $REF = 'Reference';
 
-my(@Options, $quiet, $verbose, $inprefix, $noref,
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# parse options
+
+my(@Options, $quiet, $verbose, $inprefix, $noref, $version,
              $prefix, $ref, $aformat, $tformat, $bedfile);
 setOptions();
 
@@ -23,6 +35,9 @@ my %dir_of;
 my %refseq;
 my %gapseq;
 my $reflen;
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# read optional bedfile
 
 my %mask;
 if ($bedfile) {
@@ -50,6 +65,9 @@ if ($bedfile) {
   }
 }
 msg( Dumper(\%mask) ) if $bedfile && $verbose;
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# Load in all the isolate variants
 
 msg("Loading Snippy folders");
 for my $dir (@ARGV) {
@@ -88,6 +106,10 @@ unless ($noref) {
   unshift @id, $REF;
   $N++;
 }
+
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# Output files
 
 my $txt_fn = "$prefix.txt";
 msg("Will write alignment statistics to $txt_fn");
@@ -323,6 +345,13 @@ sub err {
   msg(@_);
   exit(-1);
 }
+
+#----------------------------------------------------------------------
+ 
+sub print_version {
+  print "$EXE $VERSION\n";
+  exit(0);
+}
        
 #----------------------------------------------------------------------
 # Option setting routines
@@ -332,6 +361,7 @@ sub setOptions {
 
   @Options = (
     {OPT=>"help!",      VAR=>\&usage,                  DESC=>"This help"},
+    {OPT=>"version!",   VAR=>\&print_version, DESC=>"Print version and exit"},
     {OPT=>"quiet!",     VAR=>\$quiet,     DEFAULT=>0 , DESC=>"No output to stderr"},
     {OPT=>"verbose!",   VAR=>\$verbose,   DEFAULT=>0 , DESC=>"Verbose output"},
     {OPT=>"inprefix=s", VAR=>\$inprefix,  DEFAULT=>'snps' , DESC=>"Preferred input prefix of Snippy files"},
@@ -342,7 +372,7 @@ sub setOptions {
     {OPT=>"mask=s",     VAR=>\$bedfile,  DEFAULT=>'' , DESC=>"BED file of regions to exclude"},
   );
 
-  (!@ARGV) && (usage());
+  (!@ARGV) && (usage(1));
 
   &GetOptions(map {$_->{OPT}, $_->{VAR}} @Options) || usage();
 
@@ -355,16 +385,20 @@ sub setOptions {
 }
 
 sub usage {
-  my $exe = basename($0);
-  print STDERR "Synopsis:\n  Combine multiple Snippy folders into a core SNP alignment\n";
-  print STDERR "Usage:\n";
-  print STDERR "  $exe [options] [--noref] snippyDir1/ snippyDir2/ snippyDir3/ ...\n";
-  print STDERR "Options:\n";
+  my($exitcode) = @_;
+  $exitcode = 0 if $exitcode eq 'help'; # what gets passed by getopt func ref
+  $exitcode ||= 0;
+  select STDERR if $exitcode; # write to STDERR if exitcode is error
+
+  print "SYNOPSIS\n  $EXE $VERSION - combine snippy folders into SNP alignment\n";
+  print "USAGE\n";
+  print "  $EXE [options] [--noref] snippyDir1/ snippyDir2/ snippyDir3/ ...\n";
+  print "OPTIONS\n";
   foreach (@Options) {
-    printf STDERR "  --%-13s %s%s.\n",$_->{OPT},$_->{DESC},
-                  defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";
+    printf "  --%-11s %s%s.\n",$_->{OPT},$_->{DESC},
+           defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";
   }
-  exit(1);
+  exit($exitcode);
 }
  
 #----------------------------------------------------------------------

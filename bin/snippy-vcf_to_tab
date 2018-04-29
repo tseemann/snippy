@@ -1,15 +1,25 @@
 #!/usr/bin/env perl
 use warnings;
 use strict;
+use FindBin;
+use lib "$FindBin::RealBin/../perl5";
+###LINE_FOR_BREW_CONDA###
+use Snippy::Version;
 use Data::Dumper;
 use Bio::Tools::GFF;
 use Bio::SeqIO;
 use Fatal;
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# Globals
+
+my $VERSION = Snippy::Version->version;
+my $EXE = $FindBin::RealScript;
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Command line checking
 
-my(@Options, $debug, $auto, $vcf, $ref, $gff);
+my(@Options, $debug, $auto, $vcf, $ref, $gff, $version);
 setOptions();
 
 if ($auto) {
@@ -126,6 +136,12 @@ sub vcf_tags_to_hash {
 }
 
 #----------------------------------------------------------------------
+sub show_version {
+  print "$EXE $VERSION\n";
+  exit(0);
+}
+
+#----------------------------------------------------------------------
 # Option setting routines
 
 sub setOptions {
@@ -133,6 +149,7 @@ sub setOptions {
 
   @Options = (
     {OPT=>"help!",     VAR=>\&usage,                DESC=>"This help"},
+    {OPT=>"version!",  VAR=>\&show_version,         DESC=>"Print version and exit"},
     {OPT=>"debug!",    VAR=>\$debug,   DEFAULT=>0,  DESC=>"Output verbose debug info"},
     {OPT=>"auto!",     VAR=>\$auto,    DEFAULT=>0 , DESC=>"Autoset --vcf/ref/gff to default Snippy names"},
     {OPT=>"vcf=s",     VAR=>\$vcf,     DEFAULT=>'', DESC=>"VCF input file"},
@@ -153,12 +170,13 @@ sub setOptions {
 }
 
 sub usage {
-  print STDERR "Synopsis:\n  Convert a VCF (haploid) into TSV with column breakdown\n";
-  print STDERR "Usage:\n  $0 [options] --ref ref.fa [--gff ref.gff] --vcf snps.vcf > snp.tab\n";
-  print STDERR "Options:\n";
+  select STDERR;
+  print "SYNOPSIS\n  $EXE $VERSION - convert Snippy VCF into TSV with column breakdown\n";
+  print "USAGE\n  $EXE [options] --ref ref.fa [--gff ref.gff] --vcf snps.vcf > snp.tab\n";
+  print "OPTIONS\n";
   foreach (@Options) {
-    printf STDERR "  --%-13s %s%s.\n",$_->{OPT},$_->{DESC},
-                  defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";
+    printf "  --%-13s %s%s.\n",$_->{OPT},$_->{DESC},
+           defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";
   }
   exit(1);
 }

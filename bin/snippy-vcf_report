@@ -1,11 +1,24 @@
 #!/usr/bin/env perl
 use warnings;
 use strict;
+use FindBin;
+use lib "$FindBin::RealBin/../perl5";
+###LINE_FOR_BREW_CONDA###
+use Snippy::Version;
 use List::Util qw(max);
 use Fatal;
 
 my(@Options, $debug, $auto, $vcf, $ref, $bam, $html);
 setOptions();
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# Globals
+
+my $VERSION = Snippy::Version->version;
+my $EXE = $FindBin::RealScript;
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# Options
 
 if ($auto) {
   $vcf ||= 'snps.vcf';
@@ -18,6 +31,9 @@ $ref or die "need --ref <ref.fa>";
 $bam or die "need --bam <aln.bam>";
 
 my $opt = $html ? '-d H' : '-d T';
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# Main
 
 print STDERR "Parsing: $vcf\n";
 open VCF, '<', $vcf;
@@ -45,6 +61,12 @@ while (<VCF>) {
 }
 
 #----------------------------------------------------------------------
+sub show_version {
+  print "$EXE $VERSION\n";
+  exit(0);
+}
+
+#----------------------------------------------------------------------
 # Option setting routines
 
 sub setOptions {
@@ -52,6 +74,7 @@ sub setOptions {
 
   @Options = (
     {OPT=>"help!",     VAR=>\&usage,                DESC=>"This help"},
+    {OPT=>"version!",  VAR=>\&show_version,         DESC=>"Print version and exit"},
     {OPT=>"debug!",    VAR=>\$debug,   DEFAULT=>0 , DESC=>"Output verbose debug info"},
     {OPT=>"auto!",     VAR=>\$auto,    DEFAULT=>0 , DESC=>"Autoset --vcf/bam/ref to snippy names"},
     {OPT=>"vcf=s",     VAR=>\$vcf,     DEFAULT=>'', DESC=>"VCF input file (raw)"},
@@ -73,15 +96,16 @@ sub setOptions {
 }
 
 sub usage {
-  print STDERR "Synopsis:\n  Convert a VCF (haploid) into TSV with column breakdown\n";
-  print STDERR "Usage:\n";
-  print STDERR "  $0 [options] --auto > snps.txt  # from a snippy folder\n";
-  print STDERR "  $0 [options] --vcf snps.vcf --bam aln.bam --ref ref.fa > snps.txt\n";
-  print STDERR "  $0 [options] --vcf snps.vcf --bam aln.bam --ref ref.fa --html > snps.html\n";
-  print STDERR "Options:\n";
+  select STDERR;
+  print "SYNOPSIS\n  Convert a VCF (haploid) into TSV with column breakdown\n";
+  print "USAGE\n";
+  print "  $EXE [options] --auto > snps.txt  # from a snippy folder\n";
+  print "  $EXE [options] --vcf snps.vcf --bam aln.bam --ref ref.fa > snps.txt\n";
+  print "  $EXE [options] --vcf snps.vcf --bam aln.bam --ref ref.fa --html > snps.html\n";
+  print "OPTIONS\n";
   foreach (@Options) {
-    printf STDERR "  --%-13s %s%s.\n",$_->{OPT},$_->{DESC},
-                  defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";
+    printf "  --%-13s %s%s.\n",$_->{OPT},$_->{DESC},
+           defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";
   }
   exit(1);
 }

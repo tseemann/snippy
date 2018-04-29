@@ -2,7 +2,9 @@
 use strict;
 use warnings;
 use FindBin;
+use lib "$FindBin::RealBin/../perl5";
 ###LINE_FOR_BREW_CONDA###
+use Snippy::Version;
 use List::Util qw(min max);
 use Time::Piece;
 use Time::Seconds;
@@ -17,7 +19,7 @@ use Cwd;
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # global variables
 
-my $VERSION = "4.0-dev2";
+my $VERSION = Snippy::Version->version;
 my $EXE = $FindBin::RealScript;
 my $BINDIR = $FindBin::RealBin;
 my $APPDIR = dirname($FindBin::RealBin);
