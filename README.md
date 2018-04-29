@@ -104,7 +104,7 @@ Extension | Description
 .log | A log file with the commands run and their outputs
 .aligned.fa | A version of the reference but with `-` at position with `depth=0` and `N` for `0 < depth < --mincov` (**does not have variants**)
 
-Previous Snippy 3.x versions also produced:
+:warning: Snippy 4.x does **NOT** produce the following files that Snippy 3.x did
 
 Extension | Description
 ----------|--------------
@@ -165,6 +165,43 @@ Snippy versions prior to 4.x used `--mincov 10 --micfrac 0.9` but this was remov
 Snippy 4.x, which now relies primarily on the Freebayes statistical models to find homozygous
 variants of high probability. This increases true-positives and helps capture variants
 in extreme GC regions where Illumina coverage can drop below 10x.
+
+## Looking at variants in detail with `snippy-vcf_report`
+
+If you run Snippy with the `--report` option it will automatically run
+`snippy-vcf_report` and generate a `snps.report.txt` which has a section
+like this for each SNP in `snps.vcf`:
+```
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+>LBB_contig000001:10332 snp A=>T DP=7 Q=66.3052 [7]
+
+         10301     10311     10321     10331     10341     10351     10361
+tcttctccgagaagggaatataatttaaaaaaattcttaaataattcccttccctcccgttataaaaattcttcgcttat
+........................................T.......................................
+,,,,,,  ,,,,,,,,,,,,,,,,,,,,,t,,,,,,,,,,t,,t,,,,,,,,,,,,,,,,g,,,,,,,g,,,,,,,,,t,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,, .......T..................A............A.......
+.........................A........A.....T...........    .........C..............
+.....A.....................C..C........CT.................TA.............
+,a,,,,,a,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,t,t,,,g,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,ga,,,,,,,c,,,,,,,t,,,,,,,,,,g,,,,,,t,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+                            ............T.C..............G...............G......
+                                                    ,,,,,,,g,,,,,,,,g,,,,,,,,,,,
+                                                           g,,,,,,,,,,,,,,,,,,,,
+```
+
+If you wish to generate this report *after* you have run Snippy, you can
+run it directly:
+```
+cd snippydir
+snippy-vcf_report --cpus 8 --auto > snps.report.txt
+```
+If you want a HTML version for viewing in a web browser, use the `--html` option:
+```
+cd snippydir
+snippy-vcf_report --html --cpus 16 --auto > snps.report.html
+```
+It works by running `samtools tview` for each variant, which can be very slow
+if you have 1000s of variants. Using `--cpus` as high as possible is recommended.
 
 # Core SNP phylogeny
 
@@ -335,3 +372,4 @@ Please submit suggestions and bug reports to the
 
 For Linux (compiled on Ubuntu 16.04 LTS) and macOS (compiled on High Sierra Brew) all
 the binaries, JARs and scripts are included.
+
