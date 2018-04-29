@@ -564,34 +564,38 @@ sub setOptions {
   use Getopt::Long;
 
   @Options = (
-    'Options:',
+    'GENERAL',
     {OPT=>"help",    VAR=>\&usage,             DESC=>"This help"},
     {OPT=>"version", VAR=>\&version,           DESC=>"Print version and exit"},
     {OPT=>"citation",VAR=>\&show_citation,     DESC=>"Print citation for referencing $EXE"},
     {OPT=>"check!",  VAR=>\$check, DEFAULT=>0, DESC=>"Check dependences are installed then exit"},
+    {OPT=>"force!",  VAR=>\$force, DEFAULT=>0,  DESC=>"Force overwrite of existing output folder"},
     {OPT=>"quiet!",  VAR=>\$quiet, DEFAULT=>0, DESC=>"No screen output"},
+    'RESOURCES',
     {OPT=>"cpus=i",  VAR=>\$cpus, DEFAULT=>8,  DESC=>"Maximum number of CPU cores to use"},
     {OPT=>"ram=i",   VAR=>\$ram, DEFAULT=>8,  DESC=>"Try and keep RAM under this many GB"},
     {OPT=>"tmpdir=s",  VAR=>\$tmpdir, DEFAULT=>$ENV{TMPDIR}||'/tmp', DESC=>"Fast temporary storage eg. local SSD"},
+    'INPUT',
     {OPT=>"reference=s",  VAR=>\$reference, DEFAULT=>'',  DESC=>"Reference genome. Supports FASTA, GenBank, EMBL (not GFF)"},
-    {OPT=>"outdir=s",  VAR=>\$outdir, DEFAULT=>'',  DESC=>"Output folder"},
-    {OPT=>"prefix=s",  VAR=>\$prefix, DEFAULT=>'snps',  DESC=>"Prefix for output files"},
-    {OPT=>"force!",  VAR=>\$force, DEFAULT=>0,  DESC=>"Force overwrite of existing output folder"},
-    {OPT=>"bam=s",  VAR=>\$bam, DEFAULT=>'', DESC=>"Use this BAM file instead of aligning reads"},
-    {OPT=>"targets=s",  VAR=>\$targets, DEFAULT=>'', DESC=>"Only call SNPs from this BED file"},
     {OPT=>"R1|pe1|left=s",  VAR=>\$pe1, DEFAULT=>'', DESC=>"Reads, paired-end R1 (left)"},
     {OPT=>"R2|pe2|right=s",  VAR=>\$pe2, DEFAULT=>'', DESC=>"Reads, paired-end R2 (right)"},
     {OPT=>"se|single=s",  VAR=>\$se, DEFAULT=>'', DESC=>"Single-end reads"},
     {OPT=>"ctgs|contigs=s",  VAR=>\$ctgs, DEFAULT=>'', DESC=>"Don't have reads use these contigs"},
     {OPT=>"peil=s",  VAR=>\$peil, DEFAULT=>'', DESC=>"Reads, paired-end R1/R2 interleaved"},
+    {OPT=>"bam=s",  VAR=>\$bam, DEFAULT=>'', DESC=>"Use this BAM file instead of aligning reads"},
+    {OPT=>"targets=s",  VAR=>\$targets, DEFAULT=>'', DESC=>"Only call SNPs from this BED file"},
+    'OUTPUT',
+    {OPT=>"outdir=s",  VAR=>\$outdir, DEFAULT=>'',  DESC=>"Output folder"},
+    {OPT=>"prefix=s",  VAR=>\$prefix, DEFAULT=>'snps',  DESC=>"Prefix for output files"},
+    {OPT=>"rgid=s",  VAR=>\$rgid, DEFAULT=>'',  DESC=>"Use this \@RG ID: in the BAM header"},
     {OPT=>"unmapped!",  VAR=>\$unmapped, DEFAULT=>0,  DESC=>"Keep unmapped reads in BAM and write FASTQ"},
+    {OPT=>"report!",  VAR=>\$report, DEFAULT=>0,  DESC=>"Produce long report with visual alignment (slow)"},
+    {OPT=>"cleanup!",  VAR=>\$cleanup, DEFAULT=>0,  DESC=>"Remove most files not needed for snippy-core (inc. BAMs)"},
+    'PARAMETERS',
     {OPT=>"mapqual=i",  VAR=>\$mapqual, DEFAULT=>60,  DESC=>"Minimum read mapping quality to consider"},
     {OPT=>"basequal=i",  VAR=>\$basequal, DEFAULT=>13,  DESC=>"Minimum base quality to consider"},
     {OPT=>"mincov=i",  VAR=>\$mincov, DEFAULT=>0,  DESC=>"Minimum coverage of variant site, 0=AUTO"},
     {OPT=>"minfrac=f",  VAR=>\$minfrac, DEFAULT=>0,  DESC=>"Minumum proportion for variant evidence, 0=AUTO"},
-    {OPT=>"report!",  VAR=>\$report, DEFAULT=>0,  DESC=>"Produce long report with visual alignment (slow)"},
-    {OPT=>"cleanup!",  VAR=>\$cleanup, DEFAULT=>0,  DESC=>"Remove most files not needed for snippy-core (inc. BAMs)"},
-    {OPT=>"rgid=s",  VAR=>\$rgid, DEFAULT=>'',  DESC=>"Use this \@RG ID: in the BAM header"},
     {OPT=>"bwaopt=s",  VAR=>\$bwaopt, DEFAULT=>'',  DESC=>"Extra BWA MEM options, eg. -x pacbio"},
   );
 
@@ -615,13 +619,11 @@ sub usage {
   $exitcode ||= 0;
   select STDERR if $exitcode; # write to STDERR if exitcode is error
 
-  print "Synopsis:\n  $EXE $VERSION - $SYNOPSIS\n",
-        "Author:\n  $AUTHOR\n",
-        "Usage:\n",
-        "  $EXE [options] --outdir <dir> --ref <ref> --pe1 <R1.fq.gz> --pe2 <R2.fq.gz>\n",
-        "  $EXE [options] --outdir <dir> --ref <ref> --se <454.fastq>\n",
-        "  $EXE [options] --outdir <dir> --ref <ref> --peil <interleaved.fa.gz>\n",
-        "  $EXE [options] --outdir <dir> --ref <ref> --ctgs <assembly.fasta>\n",
+  print "SYNOPSIS\n  $EXE $VERSION - $SYNOPSIS\n",
+        "USAGE\n",
+        "  $EXE [options] --outdir <dir> --ref <ref> --R1 <R1.fq.gz> --R1 <R2.fq.gz>\n",
+        "  $EXE [options] --outdir <dir> --ref <ref> --ctgs <contigs.fa>\n",
+        "  $EXE [options] --outdir <dir> --ref <ref> --bam <reads.bam>\n",
         "";
 
   foreach (@Options) {
@@ -629,16 +631,17 @@ sub usage {
       my $def = defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";
       $def = ($def ? ' (default OFF)' : '(default ON)') if $_->{OPT} =~ m/!$/;
       my $opt = $_->{OPT};
-      $opt =~ s/!$//; 
-      $opt =~ s/=s$/ [X]/; 
-      $opt =~ s/=i$/ [N]/;
-      $opt =~ s/=f$/ [n.n]/;
-      printf STDERR "  --%-15s %s%s\n", $opt, $_->{DESC}, $def;
+      $opt =~ s/!$//;      # bool
+      $opt =~ s/=s$/ F/;   # string (or file)
+      $opt =~ s/=i$/ N/;   # int
+      $opt =~ s/=f$/ n.n/; # float
+      printf STDERR "  --%-17s %s%s\n", $opt, $_->{DESC}, $def;
     }
     else {
       print STDERR "$_\n";
     }      
   }
+  print "SOURCE\n  $URL - $AUTHOR\n";
   exit($exitcode);
 }
 
