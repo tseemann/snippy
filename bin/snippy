@@ -631,14 +631,15 @@ sub usage {
       my $def = defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";
       $def = ($def ? ' (default OFF)' : '(default ON)') if $_->{OPT} =~ m/!$/;
       my $opt = $_->{OPT};
+      $opt =~ s/\|.*(?=\=)//;  # hide 'alternative' legacy names
       $opt =~ s/!$//;      # bool
       $opt =~ s/=s$/ F/;   # string (or file)
       $opt =~ s/=i$/ N/;   # int
       $opt =~ s/=f$/ n.n/; # float
-      printf STDERR "  --%-17s %s%s\n", $opt, $_->{DESC}, $def;
+      printf "  --%-12s %s%s\n", $opt, $_->{DESC}, $def;
     }
     else {
-      print STDERR "$_\n";
+      print "$_\n";
     }      
   }
   print "SOURCE\n  $URL - $AUTHOR\n";
