@@ -447,7 +447,7 @@ close TXT;
 
 if ($report) {
   msg("Generating report, please be patient...");
-  system("$BINDIR/snippy-vcf_report --bam $prefix.bam --ref $refdir/ref.fa --vcf $prefix.vcf > $prefix.report.txt 2>> $log_file");
+  system("$BINDIR/snippy-vcf_report --cpus $cpus --bam $prefix.bam --ref $refdir/ref.fa --vcf $prefix.vcf > $prefix.report.txt 2>> $log_file");
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -589,10 +589,10 @@ sub setOptions {
     'OUTPUT',
     {OPT=>"outdir=s",  VAR=>\$outdir, DEFAULT=>'',  DESC=>"Output folder"},
     {OPT=>"prefix=s",  VAR=>\$prefix, DEFAULT=>'snps',  DESC=>"Prefix for output files"},
+    {OPT=>"report!",  VAR=>\$report, DEFAULT=>0,  DESC=>"Produce report with visual alignment per variant"},
+    {OPT=>"cleanup!",  VAR=>\$cleanup, DEFAULT=>0,  DESC=>"Remove most files not needed for snippy-core (inc. BAMs!)"},
     {OPT=>"rgid=s",  VAR=>\$rgid, DEFAULT=>'',  DESC=>"Use this \@RG ID: in the BAM header"},
     {OPT=>"unmapped!",  VAR=>\$unmapped, DEFAULT=>0,  DESC=>"Keep unmapped reads in BAM and write FASTQ"},
-    {OPT=>"report!",  VAR=>\$report, DEFAULT=>0,  DESC=>"Produce long report with visual alignment (slow)"},
-    {OPT=>"cleanup!",  VAR=>\$cleanup, DEFAULT=>0,  DESC=>"Remove most files not needed for snippy-core (inc. BAMs)"},
     'PARAMETERS',
     {OPT=>"mapqual=i",  VAR=>\$mapqual, DEFAULT=>60,  DESC=>"Minimum read mapping quality to consider"},
     {OPT=>"basequal=i",  VAR=>\$basequal, DEFAULT=>13,  DESC=>"Minimum base quality to consider"},

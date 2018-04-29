@@ -6,19 +6,20 @@ use lib "$FindBin::RealBin/../perl5";
 ###LINE_FOR_BREW_CONDA###
 use Snippy::Version;
 use List::Util qw(max);
+use File::Temp;
 use Fatal;
-
-my(@Options, $debug, $auto, $vcf, $ref, $bam, $html);
-setOptions();
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Globals
 
 my $VERSION = Snippy::Version->version;
 my $EXE = $FindBin::RealScript;
-
+my $DIVIDER = '~'x80;
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Options
+
+my(@Options, $debug, $cpus, $auto, $vcf, $ref, $bam, $html);
+setOptions();
 
 if ($auto) {
   $vcf ||= 'snps.vcf';
@@ -35,6 +36,9 @@ my $opt = $html ? '-d H' : '-d T';
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Main
 
+my $cmdfile = File::Temp->new(UNLINK=>1);
+my $count=0;
+
 print STDERR "Parsing: $vcf\n";
 open VCF, '<', $vcf;
 while (<VCF>) {
@@ -42,23 +46,25 @@ while (<VCF>) {
   chomp;
 
   # [VCF] CHROM POS ID REF ALT QUAL FILTER INFO FORMAT unknown
-  my($chr,$pos,undef,$refb,$alt,$qual) = split m/\t/;
+  my($chr,$pos,undef,$refb,$alt,$qual,$filter,$info) = split m/\t/;
 
-  my $desc = "$chr  $pos  $refb => $alt  Q=$qual";
+  $info =~ m/DP=(\d+)/; my $DP = $1 || '?';
+  $info =~ m/TYPE=(\w+)/; my $TYPE = $1 || '?';
+
+  $count++;
+  my $desc = "$chr:$pos $TYPE $refb=>$alt DP=$DP Q=$qual [$count]";
   my $begin = max(1, $pos-40); # put our SNP in the centre of the screen
 
-  if ($html) {
-    print "<HR>\n<H1>$desc</H1>\n";
-    print "<P><TT>$</TT></P>\n";
-  }
-  else {
-    print "\n\n\n", "-"x80, "\n$desc\n\n";
-  }
+  my $echo = "\\n$DIVIDER\\n>$desc\\n";
+  $echo = "<PRE>".$echo."</PRE>\\n" if $html;
 
-  my $cmd = "samtools tview -p '$chr:$begin' $opt $bam $ref";
-  print STDERR "Running: $cmd ...\n";
-  system($cmd)==0 or die "Could not run: $cmd";
+  my $cmd = "echo -e '$echo' && samtools tview -p '$chr:$begin' $opt $bam $ref";
+  print $cmdfile $cmd,"\n";
 }
+
+my $cmd = "parallel -j $cpus -k -a ".$cmdfile->filename;
+print STDERR "Running: $cmd\n";
+system($cmd)==0 or die "Could not run: $cmd";
 
 #----------------------------------------------------------------------
 sub show_version {
@@ -75,8 +81,9 @@ sub setOptions {
   @Options = (
     {OPT=>"help!",     VAR=>\&usage,                DESC=>"This help"},
     {OPT=>"version!",  VAR=>\&show_version,         DESC=>"Print version and exit"},
-    {OPT=>"debug!",    VAR=>\$debug,   DEFAULT=>0 , DESC=>"Output verbose debug info"},
-    {OPT=>"auto!",     VAR=>\$auto,    DEFAULT=>0 , DESC=>"Autoset --vcf/bam/ref to snippy names"},
+    {OPT=>"debug!",    VAR=>\$debug,   DEFAULT=>0,  DESC=>"Output verbose debug info"},
+    {OPT=>"auto!",     VAR=>\$auto,    DEFAULT=>0,  DESC=>"Autoset --vcf/bam/ref to snippy names"},
+    {OPT=>"cpus=i",    VAR=>\$cpus,    DEFAULT=>1,  DESC=>"Number of parallel threads to use"},
     {OPT=>"vcf=s",     VAR=>\$vcf,     DEFAULT=>'', DESC=>"VCF input file (raw)"},
     {OPT=>"bam=s",     VAR=>\$bam,     DEFAULT=>'', DESC=>"BAM alignments (indexed)"},
     {OPT=>"ref=s",     VAR=>\$ref,     DEFAULT=>'', DESC=>"FASTA reference (indexed)"},
