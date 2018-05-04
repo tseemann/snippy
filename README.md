@@ -54,7 +54,7 @@ conda install -c bioconda -c conda-forge snippy
 ```
 
 ## Homebrew
-Install [HomeBrew](http://brew.sh/) (Mac OS X) or [LinuxBrew](http://brew.sh/linuxbrew/) (Linux).
+Install [HomeBrew](http://brew.sh/) (Mac OS X) or [LinuxBrew](http://linuxbrew.sh/) (Linux).
 ```
 brew untap homebrew/science
 brew tap brewsci/bio
