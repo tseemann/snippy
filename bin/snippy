@@ -321,6 +321,7 @@ my @cmd = (
   "samtools faidx $refdir/ref.fa",
   ( $bam ? () : "bwa index $refdir/ref.fa" ),
   "mkdir -p $refdir/genomes && cp -f $refdir/ref.fa $refdir/genomes/ref.fa",
+  "ln -s $refdir/ref.fa .",
   # snpeff index
   "mkdir -p $refdir/ref && gzip -c $refdir/ref.gff > $refdir/ref/genes.gff.gz",
   ( $nfeat > 0 ? "snpEff build -c $refdir/snpeff.config -dataDir . -gff3 ref" 
@@ -487,6 +488,7 @@ if ($cleanup) {
   push @delme, glob("$prefix.*.csi");
   push @delme, glob("$prefix.*.gz");
   push @delme, glob("$prefix.consensus*.fa");
+  push @delme, "ref.fa"; # symlink
   for my $file (@delme) {
     msg("Deleting: $file");
     unlink $file;
