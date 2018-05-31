@@ -95,12 +95,12 @@ Extension | Description
 .csv | A [comma-separated](http://en.wikipedia.org/wiki/Comma-separated_values) version of the .tab file
 .html | A [HTML](http://en.wikipedia.org/wiki/HTML) version of the .tab file
 .vcf | The final annotated variants in [VCF](http://en.wikipedia.org/wiki/Variant_Call_Format) format
+.raw.vcf | The unfiltered variant calls from Freebayes
+.filt.vcf | The filtered variant calls from Freebayes
 .bed | The variants in [BED](http://genome.ucsc.edu/FAQ/FAQformat.html#format1) format
 .gff | The variants in [GFF3](http://www.sequenceontology.org/gff3.shtml) format
 .bam | The alignments in [BAM](http://en.wikipedia.org/wiki/SAMtools) format. Note that multi-mapping and unmapped reads are not present.
 .bam.bai | Index for the .bam file
-.raw.vcf | The unfiltered variant calls from Freebayes
-.filt.vcf | The filtered variant calls from Freebayes
 .log | A log file with the commands run and their outputs
 .aligned.fa | A version of the reference but with `-` at position with `depth=0` and `N` for `0 < depth < --mincov` (**does not have variants**)
 
