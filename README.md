@@ -95,25 +95,26 @@ Extension | Description
 .csv | A [comma-separated](http://en.wikipedia.org/wiki/Comma-separated_values) version of the .tab file
 .html | A [HTML](http://en.wikipedia.org/wiki/HTML) version of the .tab file
 .vcf | The final annotated variants in [VCF](http://en.wikipedia.org/wiki/Variant_Call_Format) format
-.raw.vcf | The unfiltered variant calls from Freebayes
-.filt.vcf | The filtered variant calls from Freebayes
 .bed | The variants in [BED](http://genome.ucsc.edu/FAQ/FAQformat.html#format1) format
 .gff | The variants in [GFF3](http://www.sequenceontology.org/gff3.shtml) format
 .bam | The alignments in [BAM](http://en.wikipedia.org/wiki/SAMtools) format. Note that multi-mapping and unmapped reads are not present.
 .bam.bai | Index for the .bam file
 .log | A log file with the commands run and their outputs
 .aligned.fa | A version of the reference but with `-` at position with `depth=0` and `N` for `0 < depth < --mincov` (**does not have variants**)
+.consensus.fa | A version of the reference genome with *all* variants instantiated
+.consensus.subs.fa | A version of the reference genome with *only substitution* variants instantiated
+.raw.vcf | The unfiltered variant calls from Freebayes
+.filt.vcf | The filtered variant calls from Freebayes
+.vcf.gz | Compressed .vcf file via [BGZIP](http://blastedbio.blogspot.com.au/2011/11/bgzf-blocked-bigger-better-gzip.html)
+.vcf.gz.csi | Index for the .vcf.gz via `bcftools index`)
 
-:warning: Snippy 4.x does **NOT** produce the following files that Snippy 3.x did
+:warning: :x: Snippy 4.x does **NOT** produce the following files that Snippy 3.x did
 
 Extension | Description
 ----------|--------------
-.vcf.gz | Compressed .vcf file via [BGZIP](http://blastedbio.blogspot.com.au/2011/11/bgzf-blocked-bigger-better-gzip.html) 
 .vcf.gz.tbi | Index for the .vcf.gz via [TABIX](http://bioinformatics.oxfordjournals.org/content/27/5/718.full)
-.consensus.fa | A version of the reference genome with *all* variants instantiated
-.consensus.subs.fa | A version of the reference genome with *only substitution* variants instantiated
-.depth.gz | Output of ```samtools depth``` for the .bam file
-.depth.gz.tbi | Index for the .depth.gz (_currently unused_)
+.depth.gz | Output of `samtools depth -aa` for the `.bam` file
+.depth.gz.tbi | Index for the `.depth.gz` file
 
 ## Columns in the TAB/CSV/HTML formats
 
@@ -318,7 +319,7 @@ discovered variants in `snps.vcf` applied!
 However, Snippy is not perfect and sometimes finds questionable variants. Typically
 you would make a copy of `snps.vcf` (let's call it `corrections.vcf`) and remove those
 lines corresponding to variants we don't trust. For example, when correcting Roche 454
-and PacBio SMRT contigs, we primarily expect to find A/T homopolymer errors and hence
+and PacBio SMRT contigs, we primarily expect to find homopolymer errors and hence
 expect to see `ins` more than `snp` type variants. 
 
 In this case you need to run the correcting process manually using these steps:

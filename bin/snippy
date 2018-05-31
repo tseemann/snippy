@@ -317,12 +317,15 @@ my $bcf_filter = qq{GT="1/1" && DP>=$mincov && AF>=$minfrac};
 
 my @cmd = (
   @pre_cmd,
+  # reference prep
   "samtools faidx $refdir/ref.fa",
   ( $bam ? () : "bwa index $refdir/ref.fa" ),
   "mkdir -p $refdir/genomes && cp -f $refdir/ref.fa $refdir/genomes/ref.fa",
+  # snpeff index
   "mkdir -p $refdir/ref && gzip -c $refdir/ref.gff > $refdir/ref/genes.gff.gz",
   ( $nfeat > 0 ? "snpEff build -c $refdir/snpeff.config -dataDir . -gff3 ref" 
                : () ),
+  # make BAM
   ($bam ? "samtools view -h -O SAM \Q$bam\E" : "bwa mem $bwaopt -t $cpus $refdir/ref.fa @reads")
     ." | samclip --ref $refdir/ref.fa.fai"
     ." | samtools sort -n $sortopt"
@@ -331,17 +334,22 @@ my @cmd = (
     ." | samtools markdup $sort_temp -r -s - -"
     ." > $prefix.bam",
   "samtools index $prefix.bam",
-
+  # call variants
   "fasta_generate_regions.py $refdir/ref.fa.fai $chunk_size > $refdir/ref.txt",
   "freebayes-parallel $refdir/ref.txt $cpus $fbopt -f $refdir/ref.fa $prefix.bam > $prefix.raw.vcf",
-
   "bcftools view --include '$bcf_filter' -Ov -o $prefix.filt.vcf $prefix.raw.vcf",
-
+  # call consequences
   ( $nfeat > 0 ? "snpEff ann -noStats -no-downstream -no-upstream -no-intergenic -no-utr"
                  ." -t -c $refdir/snpeff.config -dataDir . ref $prefix.filt.vcf > $prefix.vcf" 
                : "cp $prefix.filt.vcf $prefix.vcf" ),
+  # prepare output files
   "$BINDIR/snippy-vcf_to_tab --gff $refdir/ref.gff --ref $refdir/ref.fa --vcf $prefix.vcf > $prefix.tab",
   "bcftools view --types snps,mnps -Ov -o $prefix.filt.subs.vcf $prefix.filt.vcf",
+  # consensus sequences
+  "bcftools convert -Oz -o $prefix.vcf.gz $prefix.vcf",
+  "bcftools index -f $prefix.vcf.gz",
+  "bcftools consensus -f $refdir/ref.fa -o consensus.fa $prefix.vcf.gz",
+  "bcftools consensus -f $refdir/ref.fa -i 'STRLEN(REF)=STRLEN(ALT)' -o consensus.subs.fa $prefix.vcf.gz",
   @post_cmd,
 );
 
@@ -476,6 +484,7 @@ if ($cleanup) {
   my @delme = map { "$refdir/ref.fa$_" } qw(.fai .amb .ann .bwt .pac .sa);
   push @delme, ("$prefix.bam", "$prefix.bam.bai", "$prefix.raw.vcf");
   push @delme, glob("$prefix.*.tbi");
+  push @delme, glob("$prefix.*.csi");
   push @delme, glob("$prefix.*.gz");
   push @delme, glob("$prefix.consensus*.fa");
   for my $file (@delme) {
