@@ -240,6 +240,31 @@ Extension | Description
 
 # Advanced usage
 
+## Increasing speed when too many reads
+
+Sometimes you will have far more sequencing depth that you need to call SNPs.
+A common problem is a whole MiSeq flowcell for a single bacterial isolate,
+where 25 million reads results in genome depth as high as 2000x. This makes
+Snippy far slower than it needs to be, as most SNPs will be recovered with
+50-100x depth. If you know you have 10 times as much data as you need,
+Snippy can randomly sub-sample your FASTQ data:
+```
+# have 1000x depth, only need 100x so sample at 10%
+snippy --subsample 0.1  ...
+<snip>
+Sub-sampling reads at rate 0.1
+<snip>
+```
+
+## Only calling SNPs in particular regions
+
+If you are looking for specific SNPs, say AMR releated ones in particular genes
+in your reference genome, you can save much time by only calling variants there.
+Just put the regions of interest into a BED file:
+```
+snippy --targets sites.bed ...
+```
+
 ## Finding SNPs between contigs
 
 Sometimes one of your samples is only available as contigs, without
