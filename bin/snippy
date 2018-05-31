@@ -40,7 +40,7 @@ my @CMDLINE = ($0, @ARGV);
 
 my(@Options, $quiet, $check, $force, $outdir, $prefix,
              $reference, $cpus, $tmpdir, $ram,
-             $bam, $pe1, $pe2, $se, $peil, $ctgs, $unmapped,
+             $bam, $pe1, $pe2, $se, $peil, $ctgs, $unmapped, $subsample,
              $report, $mapqual, $basequal,
              $mincov, $minfrac, $rgid, $bwaopt, $targets,
              $cleanup);
@@ -66,7 +66,7 @@ $ENV{PATH} = "$BINDIR:"
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # check for needed exes
 
-for my $exe (qw(bwa bcftools samtools snpEff java gzip samclip
+for my $exe (qw(bwa bcftools samtools snpEff java gzip samclip seqtk
                 parallel freebayes freebayes-parallel fasta_generate_regions.py 
                 vcfstreamsort vcfuniq vcffirstheader
                 snippy-vcf_to_tab snippy-vcf_report)) {
@@ -125,6 +125,8 @@ msg("Will use $cpus CPU cores.");
 ($pe1 && $pe2) xor $se xor $peil xor $ctgs xor $bam
   or err("Can not mix read file types. Either (1) --R1 (2) --se (3) --peil (4) --ctgs (5) --bam");
 
+($subsample > 0 && $subsample <= 1) or err("Option --subsample $subsample must be between 0 and 1");
+
 my @reads;
 if ($bam) {
   $bam = File::Spec->rel2abs($bam);
@@ -161,6 +163,12 @@ else {
 
 msg("Changing working directory: $outdir");
 chdir($outdir);
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# put atypical pipeline steps into these lists
+
+my @pre_cmd;
+my @post_cmd;
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # load the reference, now support all formats Bioperl can load
@@ -202,6 +210,7 @@ while (my $seq = $in->next_seq) {
 msg("Wrote $nseq sequences to ref.fa");
 msg("Wrote $nfeat features to ref.gff");
 
+
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # if using contigs as fake High Quality FQ reads, tweak some settings
 
@@ -236,6 +245,18 @@ if ($ctgs) {
   close $out;
   msg("Wrote $counter fake ${FAKE_READ_LEN}bp reads (${FAKE_READ_COV}x, stride ${stride}bp) to $out_fn");
   @reads = ($out_fn);
+  push @post_cmd, "rm -f \Q$out_fn\E";
+}
+elsif ($subsample < 1) {
+  msg("Sub-sampling reads at rate $subsample");
+  my @ssreads;
+  for my $r (@reads) {
+    my $ssr = 'subsampled.'.basename($r, ".gz");
+    push @pre_cmd, "seqtk sample \Q$r\E $subsample > \Q$ssr\E";
+    push @post_cmd, "rm -f \Q$ssr\E";
+    push @ssreads, $ssr;
+  }
+  @reads = @ssreads;
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -295,6 +316,7 @@ my $bcf_filter = qq{GT="1/1" && DP>=$mincov && AF>=$minfrac};
 # prepare the commands
 
 my @cmd = (
+  @pre_cmd,
   "samtools faidx $refdir/ref.fa",
   ( $bam ? () : "bwa index $refdir/ref.fa" ),
   "mkdir -p $refdir/genomes && cp -f $refdir/ref.fa $refdir/genomes/ref.fa",
@@ -319,7 +341,8 @@ my @cmd = (
                  ." -t -c $refdir/snpeff.config -dataDir . ref $prefix.filt.vcf > $prefix.vcf" 
                : "cp $prefix.filt.vcf $prefix.vcf" ),
   "$BINDIR/snippy-vcf_to_tab --gff $refdir/ref.gff --ref $refdir/ref.fa --vcf $prefix.vcf > $prefix.tab",
-  "bcftools view --types snps,mnps -Ov -o $prefix.filt.subs.vcf $prefix.filt.vcf"
+  "bcftools view --types snps,mnps -Ov -o $prefix.filt.subs.vcf $prefix.filt.vcf",
+  @post_cmd,
 );
 
 if ($unmapped) {
@@ -328,11 +351,6 @@ if ($unmapped) {
             ." -0 $prefix.unmapped_R0.fq.gz"
             ." -1 $prefix.unmapped_R1.fq.gz -2 $prefix.unmapped_R2.fq.gz"
             ." $prefix.bam"
-}
-
-if ($ctgs) {
-  # remove the fake read file we hacked in
-  push @cmd, "rm -f '$reads[0]'";
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -587,6 +605,7 @@ sub setOptions {
     {OPT=>"peil=s",  VAR=>\$peil, DEFAULT=>'', DESC=>"Reads, paired-end R1/R2 interleaved"},
     {OPT=>"bam=s",  VAR=>\$bam, DEFAULT=>'', DESC=>"Use this BAM file instead of aligning reads"},
     {OPT=>"targets=s",  VAR=>\$targets, DEFAULT=>'', DESC=>"Only call SNPs from this BED file"},
+    {OPT=>"subsample=f",  VAR=>\$subsample, DEFAULT=>1, DESC=>"Subsample FASTQ to this proportion"},
     'OUTPUT',
     {OPT=>"outdir=s",  VAR=>\$outdir, DEFAULT=>'',  DESC=>"Output folder"},
     {OPT=>"prefix=s",  VAR=>\$prefix, DEFAULT=>'snps',  DESC=>"Prefix for output files"},
@@ -639,7 +658,7 @@ sub usage {
       $opt =~ s/=s$/ F/;   # string (or file)
       $opt =~ s/=i$/ N/;   # int
       $opt =~ s/=f$/ n.n/; # float
-      printf "  --%-12s %s%s\n", $opt, $_->{DESC}, $def;
+      printf "  --%-14s %s%s\n", $opt, $_->{DESC}, $def;
     }
     else {
       print "$_\n";
