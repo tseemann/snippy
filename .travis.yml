@@ -13,6 +13,7 @@ addons:
             - libbz2-1.0
             - emboss
             - curl
+            - seqtk
 
 install:
     - "cpanm --quiet --notest Bio::Perl"
