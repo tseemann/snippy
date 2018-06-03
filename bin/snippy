@@ -41,7 +41,7 @@ my @CMDLINE = ($0, @ARGV);
 my(@Options, $quiet, $check, $force, $outdir, $prefix,
              $reference, $cpus, $tmpdir, $ram,
              $bam, $pe1, $pe2, $se, $peil, $ctgs, $unmapped, $subsample,
-             $report, $mapqual, $basequal,
+             $report, $mapqual, $basequal, $maxsoft,
              $mincov, $minfrac, $rgid, $bwaopt, $targets,
              $cleanup);
 setOptions();
@@ -126,6 +126,8 @@ msg("Will use $cpus CPU cores.");
   or err("Can not mix read file types. Either (1) --R1 (2) --se (3) --peil (4) --ctgs (5) --bam");
 
 ($subsample > 0 && $subsample <= 1) or err("Option --subsample $subsample must be between 0 and 1");
+
+$maxsoft >= 0 or err("--maxsoft must be a positive integer");
 
 my @reads;
 if ($bam) {
@@ -330,7 +332,7 @@ my @cmd = (
                : () ),
   # make BAM
   ($bam ? "samtools view -h -O SAM \Q$bam\E" : "bwa mem $bwaopt -t $cpus $refdir/ref.fa @reads")
-    ." | samclip --ref $refdir/ref.fa.fai"
+    ." | samclip --max $maxsoft --ref $refdir/ref.fa.fai"
     ." | samtools sort -n $sortopt"
     ." | samtools fixmate -m - -"
     ." | samtools sort $sortopt"
@@ -631,6 +633,7 @@ sub setOptions {
     {OPT=>"unmapped!",  VAR=>\$unmapped, DEFAULT=>0,  DESC=>"Keep unmapped reads in BAM and write FASTQ"},
     'PARAMETERS',
     {OPT=>"mapqual=i",  VAR=>\$mapqual, DEFAULT=>60,  DESC=>"Minimum read mapping quality to consider"},
+    {OPT=>"maxsoft=i",  VAR=>\$maxsoft, DEFAULT=>10,  DESC=>"Maximum soft clipping to allow"},
     {OPT=>"basequal=i",  VAR=>\$basequal, DEFAULT=>13,  DESC=>"Minimum base quality to consider"},
     {OPT=>"mincov=i",  VAR=>\$mincov, DEFAULT=>0,  DESC=>"Minimum coverage of variant site, 0=AUTO"},
     {OPT=>"minfrac=f",  VAR=>\$minfrac, DEFAULT=>0,  DESC=>"Minumum proportion for variant evidence, 0=AUTO"},
