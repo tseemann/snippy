@@ -259,6 +259,7 @@ elsif ($subsample < 1) {
   @reads = @ssreads;
 }
 
+
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # create config for snpEff
 
@@ -298,8 +299,8 @@ $bwaopt .= qq{ -Y -M -R '\@RG\\tID:$rgid\\tSM:$rgid'};
 $bwaopt .= ' -p' if $peil;
 
 my $fbopt = "-p 2 -P 0.5 -q $basequal -m $mapqual"
-#          ." --no-partial-observations"
-#          ." --haplotype-length 0"
+           ." --no-partial-observations"
+           ." --haplotype-length 0"
            ." --min-repeat-entropy 1.0"
            ;
 $fbopt .= "-t '$targets'" if $targets;
@@ -321,7 +322,8 @@ my @cmd = (
   "samtools faidx $refdir/ref.fa",
   ( $bam ? () : "bwa index $refdir/ref.fa" ),
   "mkdir -p $refdir/genomes && cp -f $refdir/ref.fa $refdir/genomes/ref.fa",
-  "ln -s $refdir/ref.fa .",
+  "ln -sf $refdir/ref.fa .",
+  "ln -sf $refdir/ref.fa.fai .",
   # snpeff index
   "mkdir -p $refdir/ref && gzip -c $refdir/ref.gff > $refdir/ref/genes.gff.gz",
   ( $nfeat > 0 ? "snpEff build -c $refdir/snpeff.config -dataDir . -gff3 ref" 
@@ -360,6 +362,16 @@ if ($unmapped) {
             ." -0 $prefix.unmapped_R0.fq.gz"
             ." -1 $prefix.unmapped_R1.fq.gz -2 $prefix.unmapped_R2.fq.gz"
             ." $prefix.bam"
+}
+
+if ($report) {
+  my $qbam = "$tmpdir/$EXE.$$.Q$mapqual.bam";
+  push @cmd,
+    "samtools view -h -q $mapqual $prefix.bam | samtools sort $sortopt > $qbam",
+    "samtools index $qbam",
+    "$BINDIR/snippy-vcf_report --cpus $cpus --bam $qbam --ref $refdir/ref.fa --vcf $prefix.vcf > $prefix.report.txt",
+    "rm -f $qbam $qbam.bai",
+    ;
 }
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -470,13 +482,6 @@ for my $key (sort keys %txt) {
 }
 close TXT;
 
-# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
-# optionally generate a long visual report
-
-if ($report) {
-  msg("Generating report, please be patient...");
-  system("$BINDIR/snippy-vcf_report --cpus $cpus --bam $prefix.bam --ref $refdir/ref.fa --vcf $prefix.vcf > $prefix.report.txt 2>> $log_file");
-}
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # clean up
