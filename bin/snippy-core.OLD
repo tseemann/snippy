@@ -1,0 +1,404 @@
+#!/usr/bin/env perl
+use warnings;
+use strict;
+use FindBin;
+use lib "$FindBin::RealBin/../perl5";
+###LINE_FOR_BREW_CONDA###
+use Snippy::Version;
+use Time::Piece;
+use Data::Dumper;
+use List::MoreUtils qw(uniq any);
+use File::Spec;
+use Bio::SeqIO;
+use Bio::AlignIO;
+use Bio::LocatableSeq;
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# global variables
+
+my $VERSION = Snippy::Version->version;
+my $EXE = $FindBin::RealScript;
+
+my $REF = 'Reference';
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# parse options
+
+my(@Options, $quiet, $verbose, $inprefix, $noref, $version,
+             $prefix, $ref, $aformat, $tformat, $bedfile);
+setOptions();
+
+my $anno;
+my $snp;
+my $allsnp;
+my %dir_of;
+my %refseq;
+my %gapseq;
+my $reflen;
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# read optional bedfile
+
+my %mask;
+if ($bedfile) {
+  msg("Loading BED file: $bedfile");
+  -r $bedfile or err("Can't read --mask BED file: $bedfile");
+  my $regions=0;
+  open my $BED, '<', $bedfile;
+  while (<$BED>) {
+    next if m/^#/;
+    chomp;
+    my(@x) = split m/\t/;
+    next unless @x >= 3;
+    $x[1] =~ m/^\d+$/ or err("Bad BED start coordinate: $_");
+    $x[2] =~ m/^\d+$/ or err("Bad BED end coordinate: $_");
+    # Convert BED to GFF style coordinates
+    push @{$mask{$x[0]}}, [ $x[1]+1, $x[2]+0 ]; # +0 forces numeric
+    $regions++;
+  }
+  msg("Read $regions regions from BED file to mask SNPs from");
+
+  # We can exploit this to make masking quicker in is_masked()
+  msg("Sorting regions...");
+  for my $chr (keys %mask) {
+    $mask{$chr} = [ sort { $a->[0] <=> $b->[0] } @{$mask{$chr}} ];
+  }
+}
+msg( Dumper(\%mask) ) if $bedfile && $verbose;
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# Load in all the isolate variants
+
+msg("Loading Snippy folders");
+for my $dir (@ARGV) {
+  my $id = dir_to_id($dir);
+  exists $dir_of{$id} and err("ID '$id' already exists.");
+  msg("Using ID '$id' for $dir");
+  $dir_of{$id} = $dir;
+  add_snippy($id, $dir, $noref);
+  # load the reference genome for first time through loop
+  if (not keys %refseq) {
+    my $ref_use = '';
+    if (-r $ref) {
+       $ref_use = $ref;
+       msg("Using provided reference: $ref_use");
+    } 
+    else {
+      $ref_use = "$dir/reference/ref.fa";
+      msg("Using reference discovered in Snippy folder: $ref_use");
+    }
+    my $in = Bio::SeqIO->new(-file=>$ref_use, -format=>'fasta');
+    while (my $s = $in->next_seq) {
+      $refseq{ $s->id } = $s->seq;
+      $gapseq{ $s->id } = '-'x($s->length);
+      $reflen += $s->length;
+    }
+  }
+}
+
+my @id = sort keys %dir_of;
+my %progress = map { ( $id[$_] => ($_+1).'/'.scalar(@id) ) } (0 .. $#id);
+my $N = scalar(@id);
+msg("Loaded $N SNP tables.");
+
+unless ($noref) {
+  msg("Including '$REF' in results.");
+  unshift @id, $REF;
+  $N++;
+}
+
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# Output files
+
+my $txt_fn = "$prefix.txt";
+msg("Will write alignment statistics to $txt_fn");
+open my $txt_fh, '>', $txt_fn;
+print $txt_fh tsv('ID', 'Aligned Bases', 'Reference bases', '% Aligned Bases');
+
+msg("Loading pre-masked/aligned sequences...");
+my %aln;
+for my $id (@id) {
+  if ($id eq $REF) {
+    $aln{$REF} = { %refseq };
+    next;
+  }
+  my $aln_file = find_file_with_ext($dir_of{$id}, 'aligned.fa');
+  my $fh = Bio::SeqIO->new(-file=>$aln_file, -format=>'fasta', -alphabet=>'dna');
+  my $covered=0;
+  while (my $seq = $fh->next_seq) {
+    $aln{$id}{$seq->id} = $seq->seq;
+    $covered += $seq->seq =~ tr/AGTC/AGTC/; # count DNA
+  }
+  my $pc = sprintf "%.2f", $covered*100/$reflen;
+  msg("$progress{$id}\t$id coverage $covered/$reflen = $pc%");
+  print $txt_fh tsv($id, $covered, $reflen, $pc);
+}
+
+msg("Patching variant sites into whole genome alignment...");
+my $patched=0;
+my $masked=0;
+for my $seq (sort { $a cmp $b } keys %$snp) {
+  for my $pos (sort { $a <=> $b } keys %{$snp->{$seq}}) {
+    msg("Patched $patched so far... (currently at $seq:$pos)") if ++$patched % 10_000 == 0;
+
+    # don't include SNPs in the mask regions
+    if ( $bedfile and is_masked(\%mask, $seq, $pos) ) {
+      msg("Skipping $seq:$pos from BED mask") if $verbose;
+      delete $snp->{$seq}{$pos};  # IMPORTANT!
+      $masked++;
+      next;
+    }
+
+    my $var = $snp->{$seq}{$pos};    
+#    for my $id (keys %$var) {
+#      substr $aln{$id}{$seq}, $pos-1, 1, $var->{$id};
+#    }
+    for my $id (@id) {
+      if ($var->{$id}) {
+        # if a SNP for this ID, patch it into the alignment
+        substr $aln{$id}{$seq}, $pos-1, 1, $var->{$id};
+      }
+      else {
+        # else patch in the base
+        my $base = substr $aln{$id}{$seq}, $pos-1, 1;
+        # unless it was a - (no reads) or N (low depth)
+        $var->{$id} = $base if $base ne 'N' and $base ne '-';
+      }
+    }
+  }
+}
+
+save_hash_alignment(\%aln, "$prefix.full.aln", $aformat);
+
+#print Dumper($snp);
+my $table_fn = "$prefix.tab";
+open TABLE, '>', $table_fn;
+print TABLE tsv('CHR','POS',@id,'LOCUS_TAG','GENE','PRODUCT','EFFECT');
+
+my $nway_fn = "$prefix.nway.tab";
+open NWAY, '>', $nway_fn;
+print NWAY tsv('CHR','POS',@id,'LOCUS_TAG','GENE','PRODUCT','EFFECT');
+
+my $vcf_fn = "$prefix.vcf";
+open VCF, '>', $vcf_fn;
+print VCF "##fileformat=VCFv4.1\n";
+print VCF qq{##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n};
+print VCF qq{##INFO=<ID=TYPE,Number=A,Type=String,Description="The type of allele.">\n};
+print VCF tsv('#CHROM', qw(POS ID REF ALT QUAL FILTER INFO FORMAT), @id);
+
+msg("Writing core SNP table");
+my $nsites = 0;
+my $ncore = 0;
+my %valn;
+for my $seq (sort keys %$snp) {
+  for my $pos (sort { $a <=> $b } keys %{$snp->{$seq}}) {
+    my $var = $snp->{$seq}{$pos};
+    $nsites++;
+    my @var = map { $var->{$_} } @id;
+    print NWAY tsv($seq, $pos, @var, @{$anno->{$seq}{$pos}});
+    next unless $N == scalar(keys %$var);     # core?
+    next if not (any { $_ ne $var[0] } @var); # monomorphic?
+    $ncore++;
+    msg("$seq:$pos @var") if $verbose;
+    map { $valn{$_} .= $var->{$_} } @id;       # append
+    print TABLE tsv($seq, $pos, @var, @{$anno->{$seq}{$pos}});
+    # multi-sample VCF
+    my @allele = uniq(@var);
+    my %GT_of = ( map { ($allele[$_] => $_) } (0 .. @allele-1) );
+    print VCF tsv($seq, $pos, '.', 
+                  $allele[0], join(',', @allele[1..$#allele]), 
+                  '9999.00', '.', "TYPE=snp", "GT", 
+                  (map { $GT_of{$_} } @var),
+               );
+  }
+}
+
+msg("Found $ncore core SNPs ($masked masked) from $nsites variants (snp,mnp,complex)");
+msg("Saved SNP table: $table_fn");
+
+my $core_aln = save_hash_alignment(\%valn, "$prefix.aln", $aformat);
+
+msg("Done.");
+
+#----------------------------------------------------------------------
+
+sub is_masked {
+  my($bed, $chr, $pos) = @_;
+  # any mask regions on this contig?
+  if (my $s = $bed->{$chr}) {
+    # loop over regions
+    for my $r (@$s) {
+      # is it in one of the ranges?
+      return 1 if $pos >= $r->[0] && $pos <= $r->[1];
+      # as ranges sorted, no need to continue on (OR NOT!)
+      #last if $pos >= $r->[1];
+    }
+  }
+  # otherwise return "no"
+  return;
+}
+
+#----------------------------------------------------------------------
+
+sub save_hash_alignment {
+  my($aln, $outfile, $format) = @_;
+  msg("Constructing alignment object for $outfile");
+  my $aln_obj = Bio::SimpleAlign->new(-id=>$outfile);
+  for my $id (sort keys %{$aln}) {
+    my $dna = ref($aln->{$id}) eq 'HASH'
+            ? join( '', map { $aln->{$id}{$_} } (sort keys %{$aln->{$id}}) )
+            : $aln->{$id};
+    $aln_obj->add_seq(
+      Bio::LocatableSeq->new(
+        -id    => $id,
+        -seq   => $dna,
+        -alphabet => 'dna',
+        -start => 1,
+      )
+    );
+  }
+  $aln_obj->set_displayname_flat(); # remove "/start-end" suffix
+  msg("Writing '$format' alignment to $outfile");
+  my $out = Bio::AlignIO->new(-file=>">$outfile", -format=>$format);
+  $out->write_aln($aln_obj);
+  return $aln_obj;
+}
+
+#----------------------------------------------------------------------
+
+sub tsv {
+  return join("\t", map { defined($_) ? $_ : '.' } @_)."\n";
+}
+
+#----------------------------------------------------------------------
+
+sub dir_to_id {
+  my($dir) = @_;
+  $dir =~ s{/$}{}; # remove trailing slash first
+  my @dir = File::Spec->splitpath($dir);
+  return $dir[-1];  
+}
+
+#----------------------------------------------------------------------
+
+sub find_file_with_ext {
+  my($dir, $ext) = @_;
+  my $default = "$dir/$inprefix.$ext";
+  return $default if -r $default;
+  my($first) = glob("$dir/*.$ext");
+  $first or err("Could not find a .$ext file in $dir");
+  msg("Could not find default $default, using $first instead");
+  return $first;  
+}
+
+#----------------------------------------------------------------------
+
+sub add_snippy {
+  my($id, $dir, $noref) = @_;
+  -d $dir or err("Not a folder: $dir");
+#  my $snp_file = "$dir/$inprefix.tab";
+#  -r $snp_file or err("Could not find '$snp_file'. Not a Snippy folder or wrong --inprefix ?");
+#  msg("$id: using Snippy variant file: $snp_file");
+  my $snp_file = find_file_with_ext($dir, 'tab');
+  open SNPS, '<', $snp_file;
+  my $header = <SNPS>;
+  $header =~ m/^CHROM/ or err("Unexpected header in $snp_file: $header");
+  my $num=0;
+  my $len=0;
+  while (<SNPS>) {
+    chomp;
+    my($seq,$pos,$type,$ref,$alt,
+       undef,undef,undef,undef,undef,
+       $effect, $ltag, $gene, $prod) = split m/\t/;
+    # 0:SEQ 1:POS 2:TYPE 3:REF 4:ALT 
+    # 5:EVID 6:FTYPE 7:STRAND 8:NT 9:AA 
+    # 10:EFFECT 11:LOCUS 12:GENE 13:PRODUCT
+# next unless $type eq 'snp' or $type eq 'mnp'; # no complex,ins,del
+    next unless length($ref) eq length($alt);     # double check REF / ALT
+    # if ($type eq 'complex') {  print "$type $ref $alt\n"; }
+    msg("$type\t$ref\t$alt") if $verbose;
+    for my $offset (0 .. length($alt) - 1) {      # handle multi-SNPs
+      $snp->{$seq}{$pos+$offset}{$id}  = substr($alt,$offset,1);
+      $snp->{$seq}{$pos+$offset}{$REF} = substr($ref,$offset,1) unless $noref;
+      $len++;
+      $anno->{$seq}{$pos+$offset} = [ $ltag, $gene, $prod, $effect ]; # save annotation for TABLE
+    }
+    $num++;
+  }
+  close SNPS;
+  msg("$id: found $num variants (snp,mnp,complex) totalling $len bp in $snp_file");
+}
+
+#----------------------------------------------------------------------
+ 
+sub msg {
+  return if $quiet;
+  my $t = localtime;
+  my $line = "[".$t->hms."] @_\n";
+  print STDERR $line;
+}
+         
+#----------------------------------------------------------------------
+ 
+sub err {
+  msg(@_);
+  exit(-1);
+}
+
+#----------------------------------------------------------------------
+ 
+sub print_version {
+  print "$EXE $VERSION\n";
+  exit(0);
+}
+       
+#----------------------------------------------------------------------
+# Option setting routines
+
+sub setOptions {
+  use Getopt::Long;
+
+  @Options = (
+    {OPT=>"help!",      VAR=>\&usage,                  DESC=>"This help"},
+    {OPT=>"version!",   VAR=>\&print_version, DESC=>"Print version and exit"},
+    {OPT=>"quiet!",     VAR=>\$quiet,     DEFAULT=>0 , DESC=>"No output to stderr"},
+    {OPT=>"verbose!",   VAR=>\$verbose,   DEFAULT=>0 , DESC=>"Verbose output"},
+    {OPT=>"inprefix=s", VAR=>\$inprefix,  DEFAULT=>'snps' , DESC=>"Preferred input prefix of Snippy files"},
+    {OPT=>"prefix=s",   VAR=>\$prefix,    DEFAULT=>'core' , DESC=>"Output file prefix"},
+    {OPT=>"ref=s",      VAR=>\$ref,       DEFAULT=>'' , DESC=>"Reference genome (try to find in Snippy folder otherwise)"},
+    {OPT=>"noref!",     VAR=>\$noref,     DEFAULT=>0 , DESC=>"Exclude reference"},
+    {OPT=>"aformat=s",  VAR=>\$aformat,   DEFAULT=>'fasta' , DESC=>"Output alignment format: nexus fasta phylip maf clustalw ..."},
+    {OPT=>"mask=s",     VAR=>\$bedfile,  DEFAULT=>'' , DESC=>"BED file of regions to exclude"},
+  );
+
+  (!@ARGV) && (usage(1));
+
+  &GetOptions(map {$_->{OPT}, $_->{VAR}} @Options) || usage();
+
+  # Now setup default values.
+  foreach (@Options) {
+    if (defined($_->{DEFAULT}) && !defined(${$_->{VAR}})) {
+      ${$_->{VAR}} = $_->{DEFAULT};
+    }
+  }
+}
+
+sub usage {
+  my($exitcode) = @_;
+  $exitcode = 0 if $exitcode eq 'help'; # what gets passed by getopt func ref
+  $exitcode ||= 0;
+  select STDERR if $exitcode; # write to STDERR if exitcode is error
+
+  print "SYNOPSIS\n  $EXE $VERSION - combine snippy folders into SNP alignment\n";
+  print "USAGE\n";
+  print "  $EXE [options] [--noref] snippyDir1/ snippyDir2/ snippyDir3/ ...\n";
+  print "OPTIONS\n";
+  foreach (@Options) {
+    printf "  --%-11s %s%s.\n",$_->{OPT},$_->{DESC},
+           defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";
+  }
+  exit($exitcode);
+}
+ 
+#----------------------------------------------------------------------
