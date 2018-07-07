@@ -254,17 +254,31 @@ Extension | Description
 .txt | Tab-separated columnar list of alignment/core-size statistics
 .self_mask.bed | BED file generated if `--mask auto` is used.
 
+## Why is `core.full.aln` an alphabet soup?
+
+The `core.full.aln` file is a FASTA formatted mutliple sequence alignment file.
+It has one sequence for the reference, and one for each sample participating in
+the core genome calculation.  Each sequence has the same length as the reference
+sequence.
+
+Character | Meaning
+-------------------
+`ATGC` | Same as the reference
+`atgc` | Different from the reference
+`-`    | Zero coverage in this sample **or** a deletion relative to the reference
+`N`    | Low coverage in this sample (based on `--mincov`)
+`X`    | Masked region of reference (from `--mask`)
+`n`    | Heterozygous site in this sample
+
 ## Options
 
 * If you want to mask certain regions of the genome, you can provide a BED file
   with the `--mask` parameter. Any SNPs in those regions will be excluded. This
   is common for genomes like *M.tuberculosis* where pesky repetitive PE/PPE/PGRS
-  gebes cause false positives.
+  genes cause false positives, or masking phage regions.
 * If you use the `snippy --cleanup` option the reference files will be deleted.
   This means `snippy-core` can not "auto-find" the reference. In this case you
   simply use `snippy-core --reference REF` to provide the reference in FASTA format.
-* If you want to exclude the reference genome from the alignment, 
-  use `snippy-core --noref`.
 
 # Advanced usage
 
