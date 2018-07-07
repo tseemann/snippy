@@ -157,7 +157,7 @@ if (-d $outdir) {
   if ($force) {
     #msg("Deleting all files in existing folder: $outdir");
     #remove_tree($outdir, { keep_root=>1 } )
-    msg("Used --force, will re-use existing $outdir");
+    msg("Used --force, will overwrite existing $outdir");
   }
   else {
     err("Output folder $outdir already exists. Remove or use --force.");
