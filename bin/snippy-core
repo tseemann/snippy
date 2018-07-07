@@ -277,7 +277,7 @@ sub matrix_to_tsv {
 sub create_file {
   my($fname) = @_;
   msg("Opening: $fname");
-  return IO::File->new("> $fname") or err("Can't open: $fname");
+  return IO::File->new(">$fname"); # or err("Can't open: $fname");
 }
 
 #----------------------------------------------------------------------
@@ -297,7 +297,7 @@ sub load_fasta_hash {
   msg("Loading FASTA: $fname") if $debug;
   my $hash;
   my $ids;
-  my $in = Bio::SeqIO->new(-file=>$fname, -format=>"fasta");
+  my $in = Bio::SeqIO->new(-file=>$fname, -format=>"fasta", -alphabet=>'dna');
   while (my $seq = $in->next_seq) {
     $hash->{ $seq->id } = uc( $seq->seq );
     push @$ids, $seq->id;
@@ -309,7 +309,7 @@ sub load_fasta_hash {
 sub save_fasta_hash {
   my($fname, $hash, $order) = @_;
   msg("Saving FASTA: $fname") if $debug;
-  my $out = Bio::SeqIO->new(-file=>">$fname", -format=>"fasta");
+  my $out = Bio::SeqIO->new(-file=>">$fname", -format=>"fasta", -alphabet=>'dna');
   $order = [ sort keys %$hash ] unless $order;
   for my $id (@$order) {
     $out->write_seq(
