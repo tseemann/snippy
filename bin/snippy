@@ -30,6 +30,8 @@ my $OPSYS = $^O;
 my $t0 = localtime;
 my $MIN_FREEBAYES_CHUNK_SIZE = 1000;
 my $FAKE_READ_LEN = 250;
+my $KEEP_VCF_TAGS = join(',', (map { "^INFO/$_" } qw"TYPE DP RO AO AF"),
+                              (map { "^FORMAT/$_" } qw"GT DP RO AO QR QA GL") );
 
 # for the logfile later on
 my $ORIGDIR = getcwd;
@@ -66,9 +68,9 @@ $ENV{PATH} = "$BINDIR:"
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # check for needed exes
 
-for my $exe (qw(bwa bcftools samtools snpEff java gzip samclip seqtk
+for my $exe (qw(bwa minimap2 bcftools samtools java snpEff samclip seqtk snp-sites
                 parallel freebayes freebayes-parallel fasta_generate_regions.py 
-                vcfstreamsort vcfuniq vcffirstheader
+                vcfstreamsort vcfuniq vcffirstheader gzip
                 snippy-vcf_to_tab snippy-vcf_report)) {
   my($which) = qx(which $exe 2> /dev/null);
   $which or err("Can not find required '$exe' in PATH");
@@ -291,6 +293,7 @@ msg("Freebayes will process $num_chunks chunks of $chunk_size bp, $cpus chunks a
 # prepare the command options
 
 unless ($rgid) {
+  $outdir =~ s{/*$}{}; # remove trailing slashes (D.Ingle)
   my @dirs = File::Spec->splitdir($outdir);
   $rgid = $dirs[-1];
   #msg("RGID: dirs=[@dirs] rgid=$rgid");
@@ -301,8 +304,8 @@ $bwaopt .= qq{ -Y -M -R '\@RG\\tID:$rgid\\tSM:$rgid'};
 $bwaopt .= ' -p' if $peil;
 
 my $fbopt = "-p 2 -P 0.5 -q $basequal -m $mapqual"
-           ." --no-partial-observations"
-           ." --haplotype-length 0"
+#           ." --no-partial-observations"
+#           ." --haplotype-length -1"
            ." --min-repeat-entropy 1.0"
            ;
 $fbopt .= "-t '$targets'" if $targets;
@@ -313,10 +316,20 @@ my $sort_ram = "-m ".sprintf("%dM", 1000*$ram/$sort_cpus);
 $sort_cpus = "--threads $sort_cpus";
 my $sortopt = "-l 0 $sort_temp $sort_cpus $sort_ram";
 
-my $bcf_filter = qq{GT="1/1" && DP>=$mincov && AF>=$minfrac};
+my $bcf_filter = qq{(GT="1/1" || GT="1|1") && DP>=$mincov && AF>=$minfrac};
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # prepare the commands
+
+sub consensus_commands {
+  my($ref, $vcf, $fasta, $nuke) = @_;
+  return (
+    "bcftools convert -Oz -o $vcf.gz $vcf",
+    "bcftools index -f $vcf.gz",
+    "bcftools consensus -f $ref -o $fasta $vcf.gz",
+    $nuke ? "rm -f $vcf.gz $vcf.gz.csi $vcf.gz.tbi" : (),
+  );
+}
 
 my @cmd = (
   @pre_cmd,
@@ -342,19 +355,22 @@ my @cmd = (
   # call variants
   "fasta_generate_regions.py $refdir/ref.fa.fai $chunk_size > $refdir/ref.txt",
   "freebayes-parallel $refdir/ref.txt $cpus $fbopt -f $refdir/ref.fa $prefix.bam > $prefix.raw.vcf",
-  "bcftools view --include '$bcf_filter' -Ov -o $prefix.filt.vcf $prefix.raw.vcf",
+  # filter out hets + decompose into allelic primitives
+  "bcftools view --include '$bcf_filter' $prefix.raw.vcf ".
+   " | bcftools annotate --remove '$KEEP_VCF_TAGS' > $prefix.filt.vcf",
+#   " > $prefix.filt.vcf",
   # call consequences
   ( $nfeat > 0 ? "snpEff ann -noStats -no-downstream -no-upstream -no-intergenic -no-utr"
                  ." -t -c $refdir/snpeff.config -dataDir . ref $prefix.filt.vcf > $prefix.vcf" 
                : "cp $prefix.filt.vcf $prefix.vcf" ),
   # prepare output files
   "$BINDIR/snippy-vcf_to_tab --gff $refdir/ref.gff --ref $refdir/ref.fa --vcf $prefix.vcf > $prefix.tab",
-  "bcftools view --types snps,mnps -Ov -o $prefix.filt.subs.vcf $prefix.filt.vcf",
+  # SNPS only
+  "$BINDIR/snippy-vcf_extract_subs $prefix.filt.vcf > $prefix.subs.vcf",
   # consensus sequences
-  "bcftools convert -Oz -o $prefix.vcf.gz $prefix.vcf",
-  "bcftools index -f $prefix.vcf.gz",
-  "bcftools consensus -f $refdir/ref.fa -o consensus.fa $prefix.vcf.gz",
-  "bcftools consensus -f $refdir/ref.fa -i 'STRLEN(REF)=STRLEN(ALT)' -o consensus.subs.fa $prefix.vcf.gz",
+  consensus_commands("$refdir/ref.fa", "$prefix.vcf", "$prefix.consensus.fa"),
+  consensus_commands("$refdir/ref.fa", "$prefix.subs.vcf", "$prefix.consensus.subs.fa", 1),
+  # any final stuff
   @post_cmd,
 );
 
@@ -405,27 +421,25 @@ for my $cmd (@cmd) {
 #   . if coverage < mindepth add "N"
 #   . else add "[AGTC]" as appropriate (*** but NOT the SNPS ***)
 
+# this is the reference with SNPs applied (not indels)
+my $subbed = load_fasta_hash("$prefix.consensus.subs.fa");
+
 my $afa_fn = "$prefix.aligned.fa";
-msg("Generating aligned/masked FASTA relative to reference: $afa_fn");
+msg("Generating reference aligned/masked FASTA relative to reference: $afa_fn");
 my %masked;
-for my $id (keys %refseq) {
-  $masked{$id} = '-'x(length($refseq{$id})); 
+for my $id (keys %$subbed) {
+  $masked{$id} = '-'x(length($subbed->{$id}));
 }
-#  "samtools depth -aa -q $basequal $prefix.bam | bgzip > $prefix.depth.gz",
-#open my $depth_fh, '-|', "bgzip -c -d \Q$prefix.depth.gz";
 open my $depth_fh, '-|', "samtools depth -aa -q $basequal $prefix.bam";
 while (<$depth_fh>) {
   my($seqid, $pos, $cov) = split m/\t/;
   # if mincov=0 (AUTO) then it will allow everything except depth=0
-  my $new = $cov <= 0 ? '-' : $cov < $mincov ? 'N' : substr($refseq{$seqid}, $pos-1, 1);
+  my $new = $cov <= 0 ? '-' : $cov < $mincov ? 'N' : substr($subbed->{$seqid}, $pos-1, 1);
   substr $masked{$seqid}, $pos-1, 1, $new;
 }
 close $depth_fh;
 
-my $afa_fh = Bio::SeqIO->new(-file=>">$afa_fn", -format=>'fasta');
-for my $id (sort keys %masked) {
-  $afa_fh->write_seq( Bio::Seq->new(-id=>$id, -seq=>$masked{$id}, -alphabet=>'dna') );
-}
+save_fasta_hash($afa_fn, \%masked);
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # produce .bed and .gff files from the .csv
@@ -539,6 +553,31 @@ srand( $$ + $secs + $num_var + $refsize ); # seed
 msg( $motd[ int(rand(scalar(@motd))) ] );
 
 msg("Done.");
+
+#----------------------------------------------------------------------
+
+sub load_fasta_hash {
+  my($fname) = @_;
+  my $hash;
+  my $in = Bio::SeqIO->new(-file=>$fname, -format=>"fasta");
+  while (my $seq = $in->next_seq) {
+    $hash->{ $seq->id } = uc( $seq->seq );
+  }
+  return $hash;
+}
+
+#----------------------------------------------------------------------
+
+sub save_fasta_hash {
+  my($fname, $hash) = @_;
+  my $out = Bio::SeqIO->new(-file=>">$fname", -format=>"fasta");
+  for my $id (keys %$hash) {
+    $out->write_seq(
+      Bio::Seq->new(-id=>$id, -seq=>$hash->{$id}, -alphabet=>'dna')
+    );
+  }
+  return $hash;
+}
 
 #----------------------------------------------------------------------
 
