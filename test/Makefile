@@ -10,7 +10,7 @@ MAKEFLAGS += --no-builtin-variables
 
 CPUS = 1
 SNIPPY = ../bin/snippy --cpus $(CPUS)
-SNIPPYCORE = ../bin/snippy-core --verbose
+SNIPPYCORE = ../bin/snippy-core
 R1 = reads_R1.fastq.gz
 R2 = reads_R2.fastq.gz
 
@@ -32,7 +32,7 @@ core.txt : A/snps.tab B/snps.tab C/snps.tab D/snps.tab
 %/R1.fq %/R2.fq : $(REF)
 	mkdir -p $(@D)
 	wgsim -S $(shell echo $(@D) | od -N 1 -i | head -n 1 | cut -c9-) \
-		-h -e 0.05 -N 10000 -1 100 -2 100 -d 200 \
+		-h -r 0.02 -N 10000 -1 100 -2 100 -d 200 \
 		$< $@ $(subst R2,R1,$@) > $(@D)/dwgsim.tab
 
 %.fna : %.gbk
