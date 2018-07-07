@@ -32,6 +32,9 @@ my $MIN_FREEBAYES_CHUNK_SIZE = 1000;
 my $FAKE_READ_LEN = 250;
 my $KEEP_VCF_TAGS = join(',', (map { "^INFO/$_" } qw"TYPE DP RO AO AF"),
                               (map { "^FORMAT/$_" } qw"GT DP RO AO QR QA GL") );
+my $HET_SYM = 'n';
+my $ZEROCOV_SYM = '-';
+my $LOWCOV_SYM = 'N';
 
 # for the logfile later on
 my $ORIGDIR = getcwd;
@@ -434,10 +437,29 @@ open my $depth_fh, '-|', "samtools depth -aa -q $basequal $prefix.bam";
 while (<$depth_fh>) {
   my($seqid, $pos, $cov) = split m/\t/;
   # if mincov=0 (AUTO) then it will allow everything except depth=0
-  my $new = $cov <= 0 ? '-' : $cov < $mincov ? 'N' : substr($subbed->{$seqid}, $pos-1, 1);
+  my $new = $cov <= 0 ? $ZEROCOV_SYM
+                      : $cov < $mincov ? $LOWCOV_SYM
+                                       : substr($subbed->{$seqid}, $pos-1, 1);
   substr $masked{$seqid}, $pos-1, 1, $new;
 }
 close $depth_fh;
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# go back and patch in 'n' at all heterozygous sites
+
+my $het_bp = 0;
+open my $het_fh, '-|',
+  qq{bcftools query -i 'GT="0/1"' -f '%CHROM\\t%POS\\t%REF\\t%ALT\\t%TYPE\\n' $prefix.raw.vcf};
+while (<$het_fh>) {
+  chomp;
+#  msg("HET: $_");
+  my($chr,$pos,$ref,$alt,$type) = split m/\t/;
+#  my $L = min( length($ref), length($alt) );
+  my $L = length($ref);
+  substr $masked{$chr}, $pos-1, $L, ($HET_SYM)x$L;
+  $het_bp += $L;
+}
+msg("Marked $het_bp heterozygous sites with '$HET_SYM'");
 
 save_fasta_hash($afa_fn, \%masked);
 

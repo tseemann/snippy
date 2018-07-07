@@ -115,6 +115,7 @@ for my $dir (@ARGV) {
   msg("$id: loading snippy alignment from $afa") if $debug;
   ($seq{$id}) = load_fasta_hash($afa);  # load snippy alignment
   my $unal = sum( map { $seq{$id}{$_} =~ tr/-/-/ } @$chrom_list );
+  my $nhet = sum( map { $seq{$id}{$_} =~ tr/n/n/ } @$chrom_list );
   my($ndel,$nins,$nsnp) = (0,0,0);
   
   msg("$id: reading variants from $vcf") if $debug;
@@ -143,7 +144,7 @@ for my $dir (@ARGV) {
     }
   }
   my $gaps = sum( map { $seq{$id}{$_} =~ tr/-/-/ } @$chrom_list );
-  msg("Sample\t$id\tsnp=$nsnp\tdel=$ndel\tins=$nins\tunaligned=$gaps");
+  msg("Sample\t$id\tsnp=$nsnp\tdel=$ndel\tins=$nins\thet=$nhet\tunaligned=$gaps");
 }
 
 @id = sort @id;
@@ -234,7 +235,7 @@ system($cmd)==0 or err("Could not run: $cmd");
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # PREFIX.txt file
-my @stats = ([ qw(ID LENGTH ALIGNED UNALIGNED VARIANT MASKED LOWCOV) ]);
+my @stats = ([ qw(ID LENGTH ALIGNED UNALIGNED VARIANT HET MASKED LOWCOV) ]);
 for my $id (@id) {
  push @stats, [
    $id,
@@ -242,6 +243,7 @@ for my $id (@id) {
    $out{$id} =~ tr/[AGCTagct]/[AGCTagct]/,
    $out{$id} =~ tr/-/-/,
    $out{$id} =~ tr/[agct]/[agct]/,
+   $out{$id} =~ tr/n/n/,
    $out{$id} =~ tr/X/X/,
    $out{$id} =~ tr/N/N/,
  ];
@@ -299,7 +301,7 @@ sub load_fasta_hash {
   my $ids;
   my $in = Bio::SeqIO->new(-file=>$fname, -format=>"fasta", -alphabet=>'dna');
   while (my $seq = $in->next_seq) {
-    $hash->{ $seq->id } = uc( $seq->seq );
+    $hash->{ $seq->id } = $seq->seq;
     push @$ids, $seq->id;
   }
   return ($hash, $ids);
