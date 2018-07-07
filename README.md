@@ -422,11 +422,11 @@ Please submit suggestions and bug reports to the
 * snpEff >= 4.3
 * samclip >= 0.2
 * snp-sites >= 2.0
-* EMBOSS >= 6.0 (for testing only - `seqret` command)
+* EMBOSS >= 6.0 (for the `seqret` command)
 * wgsim >= 1.8 (for testing only - `wgsim` command)
 
 ## Bundled binaries
 
-For Linux (compiled on Ubuntu 16.04 LTS) and macOS (compiled on High Sierra Brew) all
-the binaries, JARs and scripts are included.
+For Linux (compiled on Ubuntu 16.04 LTS) and macOS (compiled on High Sierra Brew) 
+some of the binaries, JARs and scripts are included.
 
