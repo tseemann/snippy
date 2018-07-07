@@ -252,6 +252,7 @@ Extension | Description
 .tab | Tab-separated columnar list of **core** SN sites with alleles and annotations
 .vcf | Multi-sample VCF file with genotype `GT` tags for all discovered alleles
 .txt | Tab-separated columnar list of alignment/core-size statistics
+.ref.fa | FASTA version/copy of the `--ref`
 .self_mask.bed | BED file generated if `--mask auto` is used.
 
 ## Why is `core.full.aln` an alphabet soup?
