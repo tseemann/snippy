@@ -103,6 +103,7 @@ msg("Will mask $masked_bp positions ~ ".sprintf("%.2f%%", $masked_bp*100/$total_
 # Load and decompose variants from each VCF
 
 my @id;
+my $id_counter=0;
 
 for my $dir (@ARGV) {
   my $vcf = "$dir/$in_prefix.vcf";
@@ -144,7 +145,8 @@ for my $dir (@ARGV) {
     }
   }
   my $gaps = sum( map { $seq{$id}{$_} =~ tr/-/-/ } @$chrom_list );
-  msg("Sample\t$id\tsnp=$nsnp\tdel=$ndel\tins=$nins\thet=$nhet\tunaligned=$gaps");
+  msg("$id_counter\t$id\tsnp=$nsnp\tdel=$ndel\tins=$nins\thet=$nhet\tunaligned=$gaps");
+  $id_counter++;
 }
 
 @id = sort @id;
