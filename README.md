@@ -50,15 +50,13 @@ core.aln core.tab core.nway.tab core.txt core.vcf
 ## Conda
 Install [Conda](https://conda.io/docs/) or [Miniconda](https://conda.io/miniconda.html):
 ```
-conda install -c bioconda -c conda-forge snippy
+conda install -c bioconda -c conda-forge snippy # still version 3.x sorry!
 ```
 
 ## Homebrew
 Install [HomeBrew](http://brew.sh/) (Mac OS X) or [LinuxBrew](http://linuxbrew.sh/) (Linux).
 ```
-brew untap homebrew/science
-brew tap brewsci/bio
-brew install snippy # COMING SOON!
+brew install brewsci/bio/snippy # COMING SOON!
 ```
 
 ## Source
@@ -71,7 +69,7 @@ $HOME/bin/snippy --help
 ```
 
 # Check installation
-Ensure you have the latest version:
+Ensure you have the desired version:
 ```
 snippy --version
 ```
@@ -203,6 +201,34 @@ snippy-vcf_report --html --cpus 16 --auto > snps.report.html
 ```
 It works by running `samtools tview` for each variant, which can be very slow
 if you have 1000s of variants. Using `--cpus` as high as possible is recommended.
+
+## Options
+
+* `--rgid` will set the Read Group (`RG`) ID (`ID`) and Sample (`SM`) in the BAM and VCF file.
+If not supplied, it will will use the `--outdir` folder name for both `ID` and `SM`.
+
+* `--mapqual` is the minimum mapping quality to accept in variant calling. BWA MEM using `60`
+to mean a read is "uniquely mapped". 
+
+* `--basequal` is minimum quality a nucleotide needs to be used in variant calling. We use
+`13` which corresponds to error probability of ~5%. It is a traditional SAMtools value.
+
+* `--maxsoft` is how many bases of an alignment to allow to be soft-clipped before discarding
+the alignment. This is to encourage global over local alignment, and is passed to the
+`samclip` tool.
+
+* `--mincov` and `--minfrac` are used to apply hard thresholds to the variant calling
+beyond the existing statistical measure.. The optimal values depend on your sequencing
+depth and contamination rate. Values of 10 and 0.9 are commonly used.
+
+* `--targets` takes a BED file and only calls variants in those regions. Not normally needed
+unless you are only interested in variants in specific locii (eg. AMR genes) but are still
+performing WGS rather than amplicon sequencing.
+
+* `--contigs` allows you to call SNPs from contigs rather than reads. It shreds the contigs
+into synthetic reads, as to put the calls on even footing with other read samples in a 
+multi-sample analysis.
+
 
 # Core SNP phylogeny
 
