@@ -252,8 +252,10 @@ Extension | Description
 .tab | Tab-separated columnar list of **core** SN sites with alleles and annotations
 .vcf | Multi-sample VCF file with genotype `GT` tags for all discovered alleles
 .txt | Tab-separated columnar list of alignment/core-size statistics
+.self_mask.bed | BED file generated if `--mask auto` is used.
 
 ## Options
+
 * If you want to mask certain regions of the genome, you can provide a BED file
   with the `--mask` parameter. Any SNPs in those regions will be excluded. This
   is common for genomes like *M.tuberculosis* where pesky repetitive PE/PPE/PGRS
