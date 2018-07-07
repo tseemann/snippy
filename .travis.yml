@@ -20,13 +20,14 @@ addons:
 
 install:
     - "cpanm --quiet --notest Bio::Perl"
+    - "export BINDIR=$PWD/bin"
     - "curl -L https://downloads.sourceforge.net/project/samtools/samtools/1.0/samtools-bcftools-htslib-1.0_x64-linux.tar.bz2 | tar jxf -"
-    - "ln -s $PWD/samtools-bcftools-htslib-1.0_x64-linux/bin/wgsim $PWD/bin/wgsim"
+    - "ln -s $PWD/samtools-bcftools-htslib-1.0_x64-linux/bin/wgsim $BINDIR/wgsim"
     - "curl -L https://github.com/lh3/minimap2/releases/download/v2.11/minimap2-2.11_x64-linux.tar.bz2 | tar jxf -"
-    - "ln -s $PWD/minimap2-2.11_x64-linux/minimap2 $PWD/bin/minimap2"
+    - "ln -s $PWD/minimap2-2.11_x64-linux/minimap2 $BINDIR/minimap2"
     - "curl -L https://github.com/sanger-pathogens/snp-sites/archive/v2.4.0.tar.gz | tar zxf -"
-    - "(cd snp-sites-2.4.0 && autoreconf -i -f && ./configure --prefix=$PWD/bin && make install)"
-    - "export PATH=$PWD/bin:$PATH"
+    - "(cd snp-sites-2.4.0 && autoreconf -i -f && ./configure --bindir=$BINDIR && make install)"
+    - "export PATH=$BINDIR:$PATH"
 
 script:
     - "! (ldd $PWD/binaries/linux/freebayes | grep 'not found')"
