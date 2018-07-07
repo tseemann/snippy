@@ -42,7 +42,7 @@ Loaded 4 SNP tables.
 Found 2814 core SNPs from 96615 SNPs.
 
 % ls core.*
-core.aln core.tab core.nway.tab core.txt core.vcf
+core.aln core.tab core.tab core.txt core.vcf
 ```
 
 # Installation
@@ -250,7 +250,6 @@ Extension | Description
 .aln | A core SNP alignment in the `--aformat` format (default FASTA)
 .full.aln | A whole genome SNP alignment (includes invariant sites)
 .tab | Tab-separated columnar list of **core** SN sites with alleles and annotations
-.nway.tab | Tab-separated columnar list of **all** SNP sites with alleles and annotations
 .vcf | Multi-sample VCF file with genotype `GT` tags for all discovered alleles
 .txt | Tab-separated columnar list of alignment/core-size statistics
 
