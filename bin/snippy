@@ -433,7 +433,7 @@ my %masked;
 for my $id (keys %$subbed) {
   $masked{$id} = '-'x(length($subbed->{$id}));
 }
-open my $depth_fh, '-|', "samtools depth -aa -q $basequal $prefix.bam";
+open my $depth_fh, '-|', "samtools depth -aa -q $basequal -Q $mapqual -d 0 $prefix.bam";
 while (<$depth_fh>) {
   my($seqid, $pos, $cov) = split m/\t/;
   # if mincov=0 (AUTO) then it will allow everything except depth=0
