@@ -19,20 +19,19 @@ REF=example.fna
 BED=example.bed
 
 all: core.txt
-	wc -l ?/snps.tab
+	wc -l S?/snps.tab
 
-core.txt : A/snps.tab B/snps.tab C/snps.tab D/snps.tab
-	$(SNIPPYCORE) --prefix core --ref $(REF) A B C D 2> core.log
-	$(SNIPPYCORE) --prefix core-noref --ref $(REF) --noref A B C D 2> core-noref.log
-	$(SNIPPYCORE) --prefix core-mask --ref $(REF) --mask $(BED) A B C D 2> core-mask.log
+core.txt : S1/snps.tab S2/snps.tab S3/snps.tab S4/snps.tab
+	$(SNIPPYCORE) --prefix core --ref $(REF) S1 S2 S3 S4 2> core.log
+	$(SNIPPYCORE) --prefix core-mask --ref $(REF) --mask $(BED) S1 S2 S3 S4 2> core-mask.log
 
 %/snps.tab : %/R1.fq %/R2.fq
 	$(SNIPPY) --force --ref $(REF) --outdir $(@D) --R1 $(word 1,$^) --R2 $(word 2,$^) 2> $(@D)/snippy.log
 
 %/R1.fq %/R2.fq : $(REF)
 	mkdir -p $(@D)
-	wgsim -S $(shell echo $(@D) | od -N 1 -i | head -n 1 | cut -c9-) \
-		-h -r 0.02 -N 10000 -1 100 -2 100 -d 200 \
+	wgsim -S $(shell echo $(@D) | sed 's/[^0-9]//g') \
+		-h -r 0.005 -N 12000 -1 100 -2 100 -d 200 \
 		$< $@ $(subst R2,R1,$@) > $(@D)/dwgsim.tab
 
 %.fna : %.gbk
@@ -54,6 +53,7 @@ reads_R2.fq.gz :
 		| gzip -d -c | seqtk sample 0.2 - | pigz -9 > $@
 
 clean :
-	rm -fr ./bigtest core*.* ./{A..D}
+	rm -fr ./bigtest core*.* ./S{1,2,3,4}
+
 
 	
