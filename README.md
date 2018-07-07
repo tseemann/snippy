@@ -262,13 +262,13 @@ the core genome calculation.  Each sequence has the same length as the reference
 sequence.
 
 Character | Meaning
--------------------
-`ATGC` | Same as the reference
-`atgc` | Different from the reference
-`-`    | Zero coverage in this sample **or** a deletion relative to the reference
-`N`    | Low coverage in this sample (based on `--mincov`)
-`X`    | Masked region of reference (from `--mask`)
-`n`    | Heterozygous site in this sample
+----------|-----------
+`ATGC`    | Same as the reference
+`atgc`    | Different from the reference
+`-`       | Zero coverage in this sample **or** a deletion relative to the reference
+`N`       | Low coverage in this sample (based on `--mincov`)
+`X`       | Masked region of reference (from `--mask`)
+`n`       | Heterozygous site in this sample (has `GT=0/1` in `snps.raw.vcf`)
 
 ## Options
 
