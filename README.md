@@ -411,6 +411,7 @@ Please submit suggestions and bug reports to the
 * Perl >= 5.12
 * Perl Modules: Time::Piece (core with modern Perl), Bioperl >= 1.6
 * bwa mem >= 0.7.12 
+* minimap2 >= 2.0
 * samtools >= 1.7
 * bcftools >= 1.7
 * GNU parallel >= 2013xxxx
@@ -418,6 +419,9 @@ Please submit suggestions and bug reports to the
 * vcflib >= 1.0 (vcfstreamsort, vcfuniq, vcffirstheader)
 * snpEff >= 4.3
 * samclip >= 0.2
+* snp-sites >= 2.0
+* EMBOSS >= 6.0 (for testing only - `seqret` command)
+* wgsim >= 1.8 (for testing only - `wgsim` command)
 
 ## Bundled binaries
 
