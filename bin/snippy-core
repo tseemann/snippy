@@ -29,7 +29,7 @@ my(@Options, $debug, $noref, $aformat,
              $gap_char, $mask_char);
 setOptions();
 
-$fasta or err("Please provide --ref FASTA");
+$fasta or err("Please provide --ref FASTA/GENBANK");
 -r $fasta or err("Can't open --ref $fasta");
 
 err("Can't read --bed $bed") if $bed and $bed ne 'auto' and !-r $bed;
@@ -46,6 +46,12 @@ $aformat and wrn("$EXE $VERSION does not support the --aformat option; using 'fa
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Main
+
+my $infasta = $fasta;
+$fasta = "$out_prefix.ref.fa";
+msg("Saving reference FASTA: $fasta");
+system("seqret -auto -filter -osformat2 fasta < '$infasta' > '$fasta'")==0
+  or err("Could not convert $infasta to FASTA format");
 
 my($chrom,$chrom_list) = load_fasta_hash($fasta);
 my $total_bp = sum( map { length $chrom->{$_} } @$chrom_list );
@@ -338,7 +344,7 @@ sub setOptions {
     {OPT=>"help!",       VAR=>\&usage,                        DESC=>"This help"},
     {OPT=>"version!",    VAR=>\&show_version,                 DESC=>"Print version and exit"},
     {OPT=>"debug!",      VAR=>\$debug,      DEFAULT=>0,       DESC=>"Output verbose debug info"},
-    {OPT=>"ref=s",       VAR=>\$fasta,      DEFAULT=>'',      DESC=>"FASTA reference"},
+    {OPT=>"ref=s",       VAR=>\$fasta,      DEFAULT=>'',      DESC=>"Reference in FASTA or GENBANK"},
     {OPT=>"prefix=s",    VAR=>\$out_prefix, DEFAULT=>'core',  DESC=>"Output prefix"},
     {OPT=>"mask=s",      VAR=>\$bed,        DEFAULT=>'',      DESC=>"BED file of sites to mask"},
     {OPT=>"gap-char=s",  VAR=>\$gap_char,   DEFAULT=>'-',     DESC=>"Gap/deletion character"},
