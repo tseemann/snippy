@@ -358,7 +358,7 @@ my @cmd = (
   # call variants
   "fasta_generate_regions.py $refdir/ref.fa.fai $chunk_size > $refdir/ref.txt",
   "freebayes-parallel $refdir/ref.txt $cpus $fbopt -f $refdir/ref.fa $prefix.bam > $prefix.raw.vcf",
-  # filter out hets + decompose into allelic primitives
+  # only keep homozygous and normalize(trim) REF/ALT and remove most tags
   "bcftools view --include '$bcf_filter' $prefix.raw.vcf ".
    " | vt normalize -r $refdir/ref.fa -".
    " | bcftools annotate --remove '$KEEP_VCF_TAGS' > $prefix.filt.vcf",
@@ -450,12 +450,10 @@ close $depth_fh;
 
 my $het_bp = 0;
 open my $het_fh, '-|',
-  qq{bcftools query -i 'GT="0/1"' -f '%CHROM\\t%POS\\t%REF\\t%ALT\\t%TYPE\\n' $prefix.raw.vcf};
+  qq{bcftools query -i 'GT!="1/1"' -f '%CHROM\\t%POS\\t%REF\\t%ALT\\n' $prefix.raw.vcf};
 while (<$het_fh>) {
   chomp;
-#  msg("HET: $_");
-  my($chr,$pos,$ref,$alt,$type) = split m/\t/;
-#  my $L = min( length($ref), length($alt) );
+  my($chr,$pos,$ref,$alt) = split m/\t/;
   my $L = length($ref);
   substr $masked{$chr}, $pos-1, $L, ($HET_SYM)x$L;
   $het_bp += $L;

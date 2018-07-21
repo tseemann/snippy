@@ -63,7 +63,7 @@ while (<ARGV>) {
   
     # only want substitutions
     my $type = $itag->{TYPE};
-    next if $type eq 'ins' or $type eq 'del';
+    next if $type =~ m/ins|del/i;
       
     # filter out heterozygous sites
     if ($haploid) {
@@ -94,7 +94,7 @@ while (<ARGV>) {
       push @vcf, [ $chrom,$pos,$id,$ref,$alt,$qual,$filter,$info,$format,@sample ];
     }
     else {
-      die "Unexpected TYPE=$type : $info";
+      print STDERR "[NOTICE] Skipping TYPE=$type @ $chrom:$pos\n$info\n";
     }
   }
 }
@@ -207,7 +207,7 @@ sub setOptions {
 sub usage {
   print "SYNOPSIS\n  Convert MNP,COMPLEX into SNP and ignore INS,DEL\n";
   print "USAGE\n";
-  print "  $EXE [options] in.vcf > out.vcf";
+  print "  $EXE [options] in.vcf > out.vcf\n";
   print "OPTIONS\n";
   foreach (@Options) {
     printf "  --%-13s %s%s.\n",$_->{OPT},$_->{DESC},
