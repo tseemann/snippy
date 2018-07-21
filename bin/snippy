@@ -319,7 +319,7 @@ my $sort_ram = "-m ".sprintf("%dM", 1000*$ram/$sort_cpus);
 $sort_cpus = "--threads $sort_cpus";
 my $sortopt = "-l 0 $sort_temp $sort_cpus $sort_ram";
 
-my $bcf_filter = qq{(GT="1/1" || GT="1|1") && DP>=$mincov && AF>=$minfrac};
+my $bcf_filter = qq{(GT="1/1" || GT="1|1") && INFO/DP>=$mincov && AF>=$minfrac};
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # prepare the commands
