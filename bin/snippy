@@ -30,7 +30,7 @@ my $OPSYS = $^O;
 my $t0 = localtime;
 my $MIN_FREEBAYES_CHUNK_SIZE = 1000;
 my $FAKE_READ_LEN = 250;
-my $KEEP_VCF_TAGS = join(',', (map { "^INFO/$_" } qw"TYPE DP RO AO AF"),
+my $KEEP_VCF_TAGS = join(',', (map { "^INFO/$_" } qw"TYPE DP RO AO AB"),
                               (map { "^FORMAT/$_" } qw"GT DP RO AO QR QA GL") );
 my $HET_SYM = 'n';
 my $ZEROCOV_SYM = '-';
@@ -46,7 +46,7 @@ my @CMDLINE = ($0, @ARGV);
 my(@Options, $quiet, $check, $force, $outdir, $prefix,
              $reference, $cpus, $tmpdir, $ram,
              $bam, $pe1, $pe2, $se, $peil, $ctgs, $unmapped, $subsample,
-             $report, $mapqual, $basequal, $maxsoft,
+             $report, $mapqual, $basequal, $maxsoft, $minqual,
              $mincov, $minfrac, $rgid, $bwaopt, $targets,
              $cleanup);
 setOptions();
@@ -306,20 +306,27 @@ msg("Using BAM RG (Read Group) ID: $rgid");
 $bwaopt .= qq{ -Y -M -R '\@RG\\tID:$rgid\\tSM:$rgid'};
 $bwaopt .= ' -p' if $peil;
 
-my $fbopt = "-p 2 -P 0.5 -q $basequal -m $mapqual"
-#           ." --no-partial-observations"
-#           ." --haplotype-length -1"
-           ." --min-repeat-entropy 1.5"
-           ;
+# the goal of this is to find as many non-reference sites as possible
+# including both real SNPs - good quality 1/1 genotypes
+# as well as dodgy areas with mixtures such as het 0/1,1/2 etc.
+# so we are permissive here, and filter later
+# - we can filter on $mincov because later samtools depth will
+#   replace any sites 0 < mincov < DP with 'N', and 0 with '-'.
+
+my $fbopt = "-p 2 -P 0 -C $mincov --min-repeat-entropy 1.5 --strict-vcf".
+            " -q $basequal -m $mapqual --min-coverage $mincov -F 0.05";
 $fbopt .= "-t '$targets'" if $targets;
 
+# rules to extract good SNPs from the above freebayes
+# can't use AF here as freebayes only uses 0, 0.5, 1
+#my $bcf_filter = qq{FMT/GT="1/1" && FMT/DP>=$mincov && AB<$minfrac};
+my $bcf_filter = qq{FMT/GT="1/1" && QUAL>=$minqual && FMT/DP>=$mincov && (FMT/AO)/(FMT/DP)>=$minfrac};
+
 my $sort_temp = "-T $tmpdir/snippy.$$.";
-my $sort_cpus = min($cpus, 8);
+my $sort_cpus = min($cpus, 16);
 my $sort_ram = "-m ".sprintf("%dM", 1000*$ram/$sort_cpus);
 $sort_cpus = "--threads $sort_cpus";
 my $sortopt = "-l 0 $sort_temp $sort_cpus $sort_ram";
-
-my $bcf_filter = qq{(GT="1/1" || GT="1|1") && INFO/DP>=$mincov && AF>=$minfrac};
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # prepare the commands
@@ -447,13 +454,15 @@ close $depth_fh;
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # go back and patch in 'n' at all heterozygous sites
+# these could be 0/1, or 1/2 even, so we select any "het" site
+# https://samtools.github.io/bcftools/bcftools-man.html#expressions
 
 my $het_bp = 0;
 open my $het_fh, '-|',
-  qq{bcftools query -i 'GT!="1/1"' -f '%CHROM\\t%POS\\t%REF\\t%ALT\\n' $prefix.raw.vcf};
+  qq{bcftools query -i 'GT="het"' -f '%CHROM\\t%POS\\t%REF\\n' $prefix.raw.vcf};
 while (<$het_fh>) {
   chomp;
-  my($chr,$pos,$ref,$alt) = split m/\t/;
+  my($chr,$pos,$ref) = split m/\t/;
   my $L = length($ref);
   substr $masked{$chr}, $pos-1, $L, ($HET_SYM)x$L;
   $het_bp += $L;
@@ -693,10 +702,11 @@ sub setOptions {
     {OPT=>"unmapped!",  VAR=>\$unmapped, DEFAULT=>0,  DESC=>"Keep unmapped reads in BAM and write FASTQ"},
     'PARAMETERS',
     {OPT=>"mapqual=i",  VAR=>\$mapqual, DEFAULT=>60,  DESC=>"Minimum read mapping quality to consider"},
-    {OPT=>"maxsoft=i",  VAR=>\$maxsoft, DEFAULT=>10,  DESC=>"Maximum soft clipping to allow"},
     {OPT=>"basequal=i",  VAR=>\$basequal, DEFAULT=>13,  DESC=>"Minimum base quality to consider"},
-    {OPT=>"mincov=i",  VAR=>\$mincov, DEFAULT=>0,  DESC=>"Minimum coverage of variant site, 0=AUTO"},
-    {OPT=>"minfrac=f",  VAR=>\$minfrac, DEFAULT=>0,  DESC=>"Minumum proportion for variant evidence, 0=AUTO"},
+    {OPT=>"mincov=i",  VAR=>\$mincov, DEFAULT=>0,  DESC=>"Minimum coverage of variant site (0=AUTO)"},
+    {OPT=>"minfrac=f",  VAR=>\$minfrac, DEFAULT=>0,  DESC=>"Minumum proportion for variant evidence (0=AUTO)"},
+    {OPT=>"minqual=f",  VAR=>\$minqual, DEFAULT=>100,  DESC=>"Minumum QUALITY in VCF column 6"},
+    {OPT=>"maxsoft=i",  VAR=>\$maxsoft, DEFAULT=>10,  DESC=>"Maximum soft clipping to allow"},
     {OPT=>"bwaopt=s",  VAR=>\$bwaopt, DEFAULT=>'',  DESC=>"Extra BWA MEM options, eg. -x pacbio"},
   );
 
