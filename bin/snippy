@@ -199,7 +199,7 @@ while (my $seq = $in->next_seq) {
   $nseq++;
   for my $f ($seq->get_SeqFeatures) {
     my $ftype = $f->primary_tag;
-    next if $ftype =~ m/^(source|gene)$/;
+    next if $ftype =~ m/^(source|gene|misc_feature)$/;
     $tagcnt{ $ftype }++; # use this for features without a locus_tag
 
     # it seems to be writing phase=1 (aka frame) instead of 0 (0-based)
@@ -379,7 +379,7 @@ my @cmd = (
    " | bcftools annotate --remove '$KEEP_VCF_TAGS' > $prefix.filt.vcf",
 #   " > $prefix.filt.vcf",
   # call consequences
-  ( $nfeat > 0 ? "snpEff ann -noStats -no-downstream -no-upstream -no-intergenic -no-utr"
+  ( $nfeat > 0 ? "snpEff ann -noLog -noStats -no-downstream -no-upstream -no-utr"
                  ." -t -c $refdir/snpeff.config -dataDir . ref $prefix.filt.vcf > $prefix.vcf" 
                : "cp $prefix.filt.vcf $prefix.vcf" ),
   # prepare output files
