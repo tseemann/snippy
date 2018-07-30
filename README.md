@@ -95,7 +95,7 @@ Extension | Description
 .vcf | The final annotated variants in [VCF](http://en.wikipedia.org/wiki/Variant_Call_Format) format
 .bed | The variants in [BED](http://genome.ucsc.edu/FAQ/FAQformat.html#format1) format
 .gff | The variants in [GFF3](http://www.sequenceontology.org/gff3.shtml) format
-.bam | The alignments in [BAM](http://en.wikipedia.org/wiki/SAMtools) format. Note that multi-mapping and unmapped reads are not present.
+.bam | The alignments in [BAM](http://en.wikipedia.org/wiki/SAMtools) format. Includes unmapped, multimapping reads. Excludes duplicates.
 .bam.bai | Index for the .bam file
 .log | A log file with the commands run and their outputs
 .aligned.fa | A version of the reference but with `-` at position with `depth=0` and `N` for `0 < depth < --mincov` (**does not have variants**)
