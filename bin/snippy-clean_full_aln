@@ -1,0 +1,88 @@
+#!/usr/bin/env perl
+use warnings;
+use strict;
+use FindBin;
+use lib "$FindBin::RealBin/../perl5";
+###LINE_FOR_BREW_CONDA###
+use Snippy::Version;
+use Bio::SeqIO;
+use File::Basename;
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# Globals
+
+my $VERSION = Snippy::Version->version;
+my $EXE = $FindBin::RealScript;
+my $URL = "http://github.com/tseemann/snippy";
+my @CMDLINE = (basename($EXE), @ARGV);
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# Options
+
+my(@Options, $debug);
+my $to = 'N';
+setOptions();
+
+length($to)==1 or err("--to must be a single character, not '$to'");
+
+my $in  = Bio::SeqIO->new(-fh=>\*ARGV,   -format=>'fasta', -alphabet=>'dna');
+my $out = Bio::SeqIO->new(-fh=>\*STDOUT, -format=>'fasta', -alphabet=>'dna');
+while (my $seq = $in->next_seq) {
+  my $dna = $seq->seq;
+  $dna = uc($dna);
+  $dna =~ s/[^ACGTN-]/$to/g;
+  length($dna)==$seq->length or err("Conversion produced mismatched DNA lengths for ".$seq->id);
+  $seq->seq($dna);
+  $out->write_seq($seq);
+}
+
+#----------------------------------------------------------------------
+sub msg { print STDERR "@_\n";}
+sub wrn { msg("NOTICE:", @_); }
+sub err { msg("ERROR:", @_); exit(2); }
+
+sub show_version {
+  print "$EXE $VERSION\n";
+  exit(0);
+}
+
+#----------------------------------------------------------------------
+# Option setting routines
+
+sub setOptions {
+  use Getopt::Long;
+
+  @Options = (
+    {OPT=>"help!",       VAR=>\&usage,                        DESC=>"This help"},
+    {OPT=>"version!",    VAR=>\&show_version,                 DESC=>"Print version and exit"},
+    {OPT=>"debug!",      VAR=>\$debug,      DEFAULT=>0,       DESC=>"Output verbose debug info"},
+    {OPT=>"to=s",         VAR=>\$to,      DEFAULT=>'N',       DESC=>"Replacement char"},
+  );
+
+  (!@ARGV) && (usage());
+
+  &GetOptions(map {$_->{OPT}, $_->{VAR}} @Options) || usage();
+
+  # Now setup default values.
+  foreach (@Options) {
+    if (defined($_->{DEFAULT}) && !defined(${$_->{VAR}})) {
+      ${$_->{VAR}} = $_->{DEFAULT};
+    }
+  }
+}
+
+sub usage {
+  select STDERR;
+  print "SYNOPSIS\n  Replace non-[AGTCN-] chars with '$to'\n";
+  print "USAGE\n";
+  print "  $EXE [options] core.full.aln > gubbins.aln\n";
+  print "OPTIONS\n";
+  foreach (@Options) {
+    printf "  --%-11s %s%s.\n",$_->{OPT},$_->{DESC},
+           defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";
+  }
+  print "HOME\n  $URL\n";
+  exit(1);
+}
+ 
+#----------------------------------------------------------------------
