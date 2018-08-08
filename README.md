@@ -50,13 +50,13 @@ core.aln core.tab core.tab core.txt core.vcf
 ## Conda
 Install [Conda](https://conda.io/docs/) or [Miniconda](https://conda.io/miniconda.html):
 ```
-conda install -c bioconda -c conda-forge snippy # still version 3.x sorry!
+conda install -c bioconda -c conda-forge snippy
 ```
 
 ## Homebrew
 Install [HomeBrew](http://brew.sh/) (Mac OS X) or [LinuxBrew](http://linuxbrew.sh/) (Linux).
 ```
-brew install brewsci/bio/snippy # COMING SOON!
+brew install brewsci/bio/snippy
 ```
 
 ## Source
@@ -443,6 +443,7 @@ Please submit suggestions and bug reports to the
 * [vt](https://genome.sph.umich.edu/wiki/Vt) >= 0.5
 * snpEff >= 4.3
 * samclip >= 0.2
+* seqtk >= 1.2
 * snp-sites >= 2.0
 * EMBOSS >= 6.0 (for the `seqret` command)
 * wgsim >= 1.8 (for testing only - `wgsim` command)
