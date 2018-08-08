@@ -4,7 +4,7 @@ use base Exporter;
 @EXPORT_OK = qw(version);
 %EXPORT_TAGS = ( 'all' =>  [ @EXPORT_OK ] );
 
-our $VERSION = "4.0-pre_20180729";
+our $VERSION = "4.0.0";
 
 use strict;
 use File::Basename;
@@ -23,4 +23,3 @@ sub version_string {
 }
 
 1;
-
