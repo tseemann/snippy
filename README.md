@@ -154,16 +154,11 @@ complex | Combination of snp/mnp | ATTC => GTTA
 
 The variant calling is done by
 [Freebayes](https://github.com/ekg/freebayes).  
+The key parameters under user control are:
 
-If you wish to force more traditional cutoffs you can use these two options:
-
-* `--mincov` is the minimum number of reads covering the variant position.
-* `--minfrac` is the minimum proportion of those reads which must differ from the reference.
-
-:warning: Snippy versions prior to 4.x used `--mincov 10 --micfrac 0.9` but this was removed in
-Snippy 4.x, which now relies primarily on the Freebayes statistical models to find homozygous
-variants of high probability. This increases true-positives and helps capture variants
-in extreme GC regions where Illumina coverage can drop below 10x.
+* `--mincov` - the minimum number of reads covering a site to be considered (default=10)
+* `--minfrac` - the minimum proportion of those reads which must differ from the reference
+* `--minqual` - the minimum VCF variant call "quality" (default=100)
 
 ## Looking at variants in detail with `snippy-vcf_report`
 
