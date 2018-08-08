@@ -271,6 +271,17 @@ Character | Meaning
 `X`       | Masked region of reference (from `--mask`)
 `n`       | Heterozygous site in this sample (has `GT=0/1` in `snps.raw.vcf`)
 
+You can remove all the "weird" characters and replace them with `N` using the included
+`snippy-clean_full_aln`.  This is useful when you need to pass it to a tree-building
+or recombination-removal tool:
+
+```
+% snippy-clean_full_aln core.full.aln > clean.full.aln
+% run_gubbins.py -p gubbins clean.full.aln
+% snp-sites -c gubbins.filtered_polymorphic_sites.fasta > clean.core.aln
+% FastTree -gtr -nt clean.core.aln > clean.core.tree
+```
+
 ## Options
 
 * If you want to mask certain regions of the genome, you can provide a BED file
