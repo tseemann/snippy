@@ -108,13 +108,27 @@ msg("Will mask $masked_bp positions ~ ".sprintf("%.2f%%", $masked_bp*100/$total_
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Load and decompose variants from each VCF
 
+sub guess_prefix {
+  my($dir) = @_;
+  my $ext = "aligned.fa";
+  for my $try ("$dir/$in_prefix.$ext", <$dir/*.$ext>) {
+    #msg("Checking if file exists: $try");
+    if (-r $try) {
+      $try =~ m"^$dir/(.*?).$ext";
+      return $1;
+    }
+  }
+  return;
+}
+
 my @id;
 my $id_counter=0;
 
 for my $dir (@ARGV) {
-  my $vcf = "$dir/$in_prefix.vcf";
+  my $ipx = guess_prefix($dir) or err("Could not find .aligned.fa/.vcf in $dir");
+  my $vcf = "$dir/$ipx.vcf";
   -r $vcf or err("Could not read VCF '$vcf'");
-  my $afa = "$dir/$in_prefix.aligned.fa";
+  my $afa = "$dir/$ipx.aligned.fa";
   -r $afa or err("Could not read AFA '$afa'");
   my $id = $dir;
   push @id, $id;
@@ -364,7 +378,7 @@ sub setOptions {
     {OPT=>"mask=s",      VAR=>\$bed,        DEFAULT=>'',      DESC=>"BED file of sites to mask"},
     {OPT=>"gap-char=s",  VAR=>\$gap_char,   DEFAULT=>'-',     DESC=>"Gap/deletion character"},
     {OPT=>"mask-char=s", VAR=>\$mask_char,  DEFAULT=>'X',     DESC=>"Masking character"},
-    {OPT=>"inprefix=s",  VAR=>\$in_prefix,  DEFAULT=>'snps',  DESC=>"Prefix of Snippy output files"},
+    {OPT=>"inprefix=s",  VAR=>\$in_prefix,  DEFAULT=>'snps',  DESC=>"Expected prefix of Snippy output files"},
     {OPT=>"noref!",      VAR=>\$noref,      DEFAULT=>0,       DESC=>"Legacy option kept for backward compat."},
     {OPT=>"aformat=s",   VAR=>\$aformat,    DEFAULT=>'',      DESC=>"Legacy option kept for backward compat."},
   );
