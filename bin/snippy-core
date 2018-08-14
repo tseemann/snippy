@@ -130,7 +130,7 @@ for my $dir (@ARGV) {
   -r $vcf or err("Could not read VCF '$vcf'");
   my $afa = "$dir/$ipx.aligned.fa";
   -r $afa or err("Could not read AFA '$afa'");
-  my $id = $dir;
+  my $id = basename($dir); # strip any path info #217
   push @id, $id;
   
   msg("$id: loading snippy alignment from $afa") if $debug;
