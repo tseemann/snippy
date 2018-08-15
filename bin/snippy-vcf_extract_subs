@@ -134,7 +134,14 @@ sub decode_format {
 sub recode_info {
   my($kv, @keep) = @_;
   @keep = keys %$kv unless @keep;
-  return join(';', map { "$_=".$kv->{$_} } @keep);
+  my @tag;
+  for my $k (@keep) {
+    my $v = $kv->{$k};
+    push @tag, "$k=$v" if defined $v;
+  }
+  return join(';', @tag);
+  #Issue #221 when no value for key
+  #return join(';', map { "$_=".$kv->{$_} } @keep);
 }
 
 #----------------------------------------------------------------------
