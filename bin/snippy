@@ -202,9 +202,10 @@ while (my $seq = $in->next_seq) {
     next if $ftype =~ m/^(source|gene|misc_feature)$/;
     $tagcnt{ $ftype }++; # use this for features without a locus_tag
 
-    # it seems to be writing phase=1 (aka frame) instead of 0 (0-based)
-    # i suspect it is using /codon_start= incorrectly (1-based) !!!
-    $f->frame( $ftype eq 'CDS' ? 1 : '.' );
+    # How many bases to skip before translating
+    # https://github.com/The-Sequence-Ontology/Specifications/blob/master/gff3.md
+    # We use frame() because phase() seems to be ignored by bioperl
+    $f->frame( $ftype eq 'CDS' ? '0' : '.' );
 
     if ($f->has_tag('locus_tag')) {
       my($id) = $f->get_tag_values('locus_tag');
