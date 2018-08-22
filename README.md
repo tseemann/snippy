@@ -65,7 +65,7 @@ You'll need to add Prokka's `bin` directory to your `$PATH`.
 ```
 cd $HOME
 git clone https://github.com/tseemann/snippy.git
-$HOME/bin/snippy --help
+$HOME/snippy/bin/snippy --help
 ```
 
 # Check installation
