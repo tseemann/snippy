@@ -1,0 +1,87 @@
+#!/usr/bin/env perl
+use warnings;
+use strict;
+use FindBin;
+use File::Basename;
+use Cwd 'abs_path';
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# Globals
+
+my $EXE = $FindBin::RealScript;
+my $URL = "http://github.com/tseemann/snippy";
+my @CMDLINE = (basename($EXE), @ARGV);
+
+@ARGV or show_help(1);
+$ARGV[0] =~ m/^--?h/i and show_help(0);
+
+my $tabfn = shift @ARGV;
+-r $tabfn or err("Could not read isolate table file: $tabfn");
+
+my @cmd;
+my %seen;
+msg("Reading: $tabfn");
+open my $tabfh, '<', $tabfn;
+while (<$tabfh>) {
+  next if m/^\s*#/;
+  chomp;
+  my($id, $r1, $r2) = split m/\t/;
+  $id or err("Bad ID: $_");
+  $id =~ s/[\s'"]+/_/g;
+  err("ID '$id' has already been used") if $seen{$id};
+  my $snippy = "snippy --outdir '$id'";
+  $r1 or err("[$id] missing read/contig data: $_");
+  -r $r1 or err("[$id] unreadable file '$r1'");
+  $r1 = abs_path($r1);
+  if (defined $r2) {
+    -r $r2 or err("[$id] unreadable file '$r1'");
+    $r2 = abs_path($r2);
+    push @cmd, "$snippy --R1 '$r1' --R2 '$r2'";
+  }
+  else {
+    if ($r1 =~ m/a(.gz)?$/) {
+      push @cmd, "$snippy --ctgs '$r1'";
+    }
+    else {
+      push @cmd, "$snippy --se '$r1'";
+    }
+  }
+  $seen{$id}++;
+}
+
+my @id = sort keys %seen;
+msg("Generating output commands for", 0+@id, "isolates");
+for my $cmd (@cmd) {
+  print "$cmd @ARGV\n";
+}
+print "snippy-core --ref '$id[0]/ref.fa' @id\n";
+msg("Done.");
+
+#----------------------------------------------------------------------
+
+sub show_help {
+  my($exit) = @_;
+  $exit = 1 if not defined $exit;
+  print STDERR map { "$_\n" } (
+    "SYNOPSIS",
+    "    Automatically run Snippy on a set of isolates",
+    "USAGE",
+    "    $EXE <isolates.tab> [snippy_options ...]",
+    "ISOLATES",
+    "    Tab separated file can take PE reads, SE reads, or contigs.",
+    "      <ID> <tab> <R1.f[ast]q[.gz]> <tab> <R2.f[ast]q[.gz]>",
+    "      <ID> <tab> <SE.f[ast]q[.gz]>",
+    "      <ID> <tab> <contigs.[fa,fasta.fna]",
+    "    Lines beginning with '#' will be ignored.",
+    "HOMEPAGE",
+    "    $URL",
+  );  
+  exit($exit);
+}
+
+#----------------------------------------------------------------------
+sub msg { print STDERR "@_\n";}
+sub wrn { msg("NOTICE:", @_); }
+sub err { msg("ERROR:", @_); exit(2); }
+ 
+#----------------------------------------------------------------------

@@ -238,6 +238,39 @@ of "ins", "del" variant types, and just use variant sites, these are the "core S
 ## Input Requirements
 * a set of Snippy folders which used the same `--ref` sequence.
 
+### Using `snippy-multi`
+
+To simplify running a set of isolate sequences (reads or contigs)
+against the same reference, you can use the `snippy-multi` script.
+This script requires a *tab separated* input file as follows, and
+can handle paired-end reads, single-end reads, and assembled contigs.
+```
+# input.tab = ID R1 [R2]
+Isolate1	/path/to/R1.fq.gz	/path/to/R2.fq.gz
+Isolate1b	/path/to/R1.fastq.gz	/path/to/R2.fastq.gz
+Isolate1c	/path/to/R1.fa		/path/to/R2.fa
+# single end reads supported too
+Isolate2	/path/to/SE.fq.gz
+Isolate2b	/path/to/iontorrent.fastq
+# or already assembled contigs if you don't have reads
+Isolate3	/path/to/contigs.fa
+Isolate3b	/path/to/reference.fna.gz
+```
+Then one would run this to generate the output script.
+The first parameter should be the `input.tab` file.
+The remaining parameters should be any remaining
+shared `snippy` parameters. The `ID` will be used for
+each isolate's `--outdir`.
+```
+% snippy-multi input.tab --ref Reference.gbk --cpus 16 > runme.sh
+
+% less runme.sh   # check the script makes sense
+
+% sh ./runme.sh   # leave it running over lunch
+```
+It will also run `snippy-core` at the end to generate the
+core genome SNP alignment files `core.*`.
+
 ## Output Files
 
 Extension | Description
