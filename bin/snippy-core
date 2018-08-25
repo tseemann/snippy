@@ -92,8 +92,11 @@ if ($bed) {
   open my $BED, '<', $bed;
   while (<$BED>) {
     chomp;
+    next if m/^\s*$/; # skip blank lines
     my @bed = split m/\t/;
-    next unless @bed >= 3;
+    err("BED [@bed] needs at least 3 columns: CHR BEGIN END") if @bed < 3;
+    err("BED [@bed] has CHR that is not in the reference") if not exists $chrom->{$bed[0]};
+    err("BED [@bed] has BEGIN > END which is invalid") if $bed[1] > $bed[2];
     $bed[1]++;  # put into regular coordinates
     push @mask, [ @bed ];
     for my $pos ($bed[1] .. $bed[2]) {
