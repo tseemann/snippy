@@ -47,7 +47,7 @@ my(@Options, $quiet, $check, $force, $outdir, $prefix,
              $reference, $cpus, $tmpdir, $ram,
              $bam, $pe1, $pe2, $se, $peil, $ctgs, $unmapped, $subsample,
              $report, $mapqual, $basequal, $maxsoft, $minqual,
-             $mincov, $minfrac, $rgid, $bwaopt, $targets,
+             $mincov, $minfrac, $rgid, $bwaopt, $fbopt, $targets,
              $cleanup);
 setOptions();
 
@@ -322,8 +322,9 @@ $bwaopt .= ' -p' if $peil;
 # - we can filter on $mincov because later samtools depth will
 #   replace any sites 0 < mincov < DP with 'N', and 0 with '-'.
 
-my $fbopt = "-p 2 -P 0 -C $mincov --min-repeat-entropy 1.5 --strict-vcf".
-            " -q $basequal -m $mapqual --min-coverage $mincov -F 0.05";
+$fbopt = "-p 2 -P 0 -C $mincov --min-repeat-entropy 1.5 --strict-vcf".
+         " -q $basequal -m $mapqual --min-coverage $mincov -F 0.05".
+         " $fbopt";  # append --fbopt from command line to override previous
 $fbopt .= "-t '$targets'" if $targets;
 
 # rules to extract good SNPs from the above freebayes
@@ -717,6 +718,7 @@ sub setOptions {
     {OPT=>"minqual=f",  VAR=>\$minqual,  DEFAULT=>100, DESC=>"Minumum QUALITY in VCF column 6"},
     {OPT=>"maxsoft=i",  VAR=>\$maxsoft,  DEFAULT=>10,  DESC=>"Maximum soft clipping to allow"},
     {OPT=>"bwaopt=s",   VAR=>\$bwaopt,   DEFAULT=>'',  DESC=>"Extra BWA MEM options, eg. -x pacbio"},
+    {OPT=>"fbopt=s",    VAR=>\$fbopt,    DEFAULT=>'',  DESC=>"Extra Freebayes options, eg. --theta 1E-6 --read-snp-limit 2"},
   );
 
   (!@ARGV) && (usage(1));
