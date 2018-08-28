@@ -297,7 +297,7 @@ Character | Meaning
 `-`       | Zero coverage in this sample **or** a deletion relative to the reference
 `N`       | Low coverage in this sample (based on `--mincov`)
 `X`       | Masked region of reference (from `--mask`)
-`n`       | Heterozygous site in this sample (has `GT=0/1` in `snps.raw.vcf`)
+`n`       | Heterozygous or poor quality genotype  (has `GT=0/1` or `QUAL&lt;--minqual` in `snps.raw.vcf`)
 
 You can remove all the "weird" characters and replace them with `N` using the included
 `snippy-clean_full_aln`.  This is useful when you need to pass it to a tree-building

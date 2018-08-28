@@ -463,13 +463,14 @@ while (<$depth_fh>) {
 close $depth_fh;
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-# go back and patch in 'n' at all heterozygous sites
+# go back and patch in 'n' at all heterozygous sites and low QUAL sites
 # these could be 0/1, or 1/2 even, so we select any "het" site
 # https://samtools.github.io/bcftools/bcftools-man.html#expressions
+# QUAL issue: https://github.com/tseemann/snippy/issues/228
 
 my $het_bp = 0;
 open my $het_fh, '-|',
-  qq{bcftools query -i 'GT="het"' -f '%CHROM\\t%POS\\t%REF\\n' $prefix.raw.vcf};
+  qq{bcftools query -i 'GT="het" || QUAL<$minqual' -f '%CHROM\\t%POS\\t%REF\\n' $prefix.raw.vcf};
 while (<$het_fh>) {
   chomp;
   my($chr,$pos,$ref) = split m/\t/;
