@@ -5,7 +5,7 @@ use FindBin;
 use lib "$FindBin::RealBin/../perl5";
 ###LINE_FOR_BREW_CONDA###
 use Snippy::Version;
-use List::Util qw(min max);
+use List::Util qw(min max sum);
 use Time::Piece;
 use Time::Seconds;
 use File::Path qw(make_path remove_tree);
@@ -497,7 +497,7 @@ print HTML "<TABLE ID='$prefix' BORDER=1>\n";
 
 my %txt = (
   'Reference'     => $reference,
-  'ReferenceSize' => $refsize,
+  'ReferenceSize' => sum( map { length($refseq{$_}) } keys %refseq ),
   'ReadFiles'     => join(' ', @reads),
   'Software'      => "$EXE $VERSION",
   'DateTime'      => $t0->datetime,
