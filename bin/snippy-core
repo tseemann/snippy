@@ -24,10 +24,31 @@ my @CMDLINE = (basename($EXE), @ARGV);
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Options
 
-my(@Options, $debug, $noref, $aformat,
+my(@Options, $debug, $check, $noref, $aformat,
              $in_prefix, $out_prefix, $fasta, $bed,
              $gap_char, $mask_char);
 setOptions();
+
+msg("This is $EXE $VERSION");
+msg("Obtained from $URL");
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# check for needed exes
+
+for my $exe (qw(seqret samtools minimap2 bedtools snp-sites)) {
+  my($which) = qx(which $exe 2> /dev/null);
+  $which or err("Can not find required '$exe' in PATH");
+  chomp $which;
+  msg("Found $exe - $which");
+}
+# quit now if --check was provided
+if ($check) {
+  msg("Dependences look good!");
+  exit(0);
+}
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# check command line parameters
 
 $fasta or err("Please provide --ref FASTA/GENBANK");
 -r $fasta or err("Can't open --ref $fasta");
@@ -69,24 +90,22 @@ my $masked_bp = 0;
 if ($bed) {
   # create a self bed
   if ($bed eq 'auto') {
-    msg("--bed auto mode: self-aligning --ref $fasta to identify repeats");
-    open my $PAF, '-|', "minimap2 -c -x asm5 -X '$fasta' '$fasta' | sort -k1,1 -k3,3n";
+    msg("Auto --mask mode initiated: self-aligning --ref $fasta to identify repeats");
+    msg("Indexing '$fasta'");
+    system("samtools faidx '$fasta'")==0 or err("Could not run 'samtools faidx $fasta'");
+    # https://github.com/lh3/minimap2/blob/master/cookbook.md#hom-map
     # https://github.com/lh3/miniasm/blob/master/PAF.md  # dv:f:0.0008
-    my %paf;
-    while (<$PAF>) {
-      my @paf = split m/\t/;
-      $paf{ tsv($paf[0], $paf[2]+1, $paf[3]) }++;  # REF src
-      $paf{ tsv($paf[5], $paf[7]+1, $paf[8]) }++;  # REF dest
-    }
-    close $PAF;
-    $bed = "$out_prefix.self_mask.bed"; # filename to reload next
-    my $SBED = create_file($bed);
-    for my $line (sort keys %paf) {
-      print $SBED $line;
-    }
-    $SBED->close;
+    $bed = "$out_prefix.self_mask.bed"; # filename to reload nex
+    msg("Self-aligning --ref to identify repeats to $bed");
+    system("minimap2 -D -P -w19 -m200 '$fasta' '$fasta'"
+           ." | cut -f 1,3,4"
+           ." | sort -k1,1 -k2,2n"
+           ." | bedtools slop -i stdin -g '$fasta.fai' -r 1 -l 0"   # PAF to BED
+           ." | bedtools merge -i stdin"
+           ." > $bed 2> /dev/null")
+           ==0 or err("Could not run minimap2/bedtools");
   }
-  # load the bed
+  # load the bed - either the one we just created, or one provided via --mask
   msg("Loading mask bed file: $bed");
   # CHROM \t BEGIN(inclusive) \t END(exclusive)  # 0-based
   open my $BED, '<', $bed;
@@ -106,7 +125,8 @@ if ($bed) {
   }
   close $BED;
 }
-msg("Will mask $masked_bp positions ~ ".sprintf("%.2f%%", $masked_bp*100/$total_bp) );
+my $masked_regions = scalar(@mask);
+msg("Will mask $masked_regions regions totalling $masked_bp bp ~ ".sprintf("%.2f%%", $masked_bp*100/$total_bp) );
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Load and decompose variants from each VCF
@@ -376,6 +396,7 @@ sub setOptions {
     {OPT=>"help!",       VAR=>\&usage,                        DESC=>"This help"},
     {OPT=>"version!",    VAR=>\&show_version,                 DESC=>"Print version and exit"},
     {OPT=>"debug!",      VAR=>\$debug,      DEFAULT=>0,       DESC=>"Output verbose debug info"},
+    {OPT=>"check!",      VAR=>\$check,      DEFAULT=>0,       DESC=>"Check dependencies and exit"},
     {OPT=>"ref=s",       VAR=>\$fasta,      DEFAULT=>'',      DESC=>"Reference in FASTA or GENBANK"},
     {OPT=>"prefix=s",    VAR=>\$out_prefix, DEFAULT=>'core',  DESC=>"Output prefix"},
     {OPT=>"mask=s",      VAR=>\$bed,        DEFAULT=>'',      DESC=>"BED file of sites to mask"},

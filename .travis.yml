@@ -12,6 +12,7 @@ addons:
             - liblzma5
             - libbz2-1.0
             - emboss
+            - bedtools
             - curl
             - seqtk
             - autoconf
