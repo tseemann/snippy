@@ -194,7 +194,11 @@ my %refseq;
 my %tagcnt;
 while (my $seq = $in->next_seq) {
   exists $refseq{$seq->id} and err("Duplicate sequence ".$seq->id." in $reference");
-  $refseq{ $seq->id } = uc($seq->seq); # keep for masking later
+  # check for IUPAC codes and replace with 'n'
+  my $dna = uc($seq->seq);
+  $dna =~ s/[^AGTCN]/n/g; # https://github.com/tseemann/snippy/issues/235
+  $refseq{ $seq->id } = $dna; # keep for masking later
+  $seq->seq($dna); # replace in object for writing to ref.fa
   $out->write_seq($seq);
   $nseq++;
   for my $f ($seq->get_SeqFeatures) {
