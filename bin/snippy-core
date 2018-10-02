@@ -6,7 +6,7 @@ use lib "$FindBin::RealBin/../perl5";
 ###LINE_FOR_BREW_CONDA###
 use Snippy::Version;
 use Bio::SeqIO;
-use List::Util qw(sum max any uniq min);
+use List::Util qw(sum);
 use File::Temp;
 use Fatal;
 use File::Basename;
@@ -20,6 +20,17 @@ my $VERSION = Snippy::Version->version;
 my $EXE = $FindBin::RealScript;
 my $URL = "http://github.com/tseemann/snippy";
 my @CMDLINE = (basename($EXE), @ARGV);
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# Small util functions
+
+# MacOS List::Util is so old it doens't have 'uniq' !
+sub uniq {
+  my %seen;
+  return grep { !$seen{$_}++ } @_;
+}
+
+# https://github.com/tseemann/snippy/issues/241
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Options
