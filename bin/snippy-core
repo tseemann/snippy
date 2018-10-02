@@ -24,7 +24,7 @@ my @CMDLINE = (basename($EXE), @ARGV);
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Options
 
-my(@Options, $debug, $check, $noref, $aformat,
+my(@Options, $debug, $check, $noref, $aformat, $maxhap,
              $in_prefix, $out_prefix, $fasta, $bed,
              $gap_char, $mask_char);
 setOptions();
@@ -172,6 +172,14 @@ for my $dir (@ARGV) {
     my($chr,$pos,undef,$ref,$alt,$qual,$filter,$info,$format,$sample) = split m/\t/;
     my @ref = split m//, $ref;
     my @alt = split m//, $alt;
+
+    # https://github.com/tseemann/snippy/issues/234
+    # FIXME: should we be masking this in $seq{$id}{contig}<pos> ?
+    if (@ref > $maxhap and @alt > $maxhap) {
+      msg("Skipping: $id $chr $pos $ref $alt | both haplotypes > $maxhap bp") if $debug;
+      next;
+    }
+
     my $L = max($#ref, $#alt);
 
     for my $i (0 .. $L) {  # this is L not L-1 because we used $#array
@@ -399,6 +407,7 @@ sub setOptions {
     {OPT=>"check!",      VAR=>\$check,      DEFAULT=>0,       DESC=>"Check dependencies and exit"},
     {OPT=>"ref=s",       VAR=>\$fasta,      DEFAULT=>'',      DESC=>"Reference in FASTA or GENBANK"},
     {OPT=>"prefix=s",    VAR=>\$out_prefix, DEFAULT=>'core',  DESC=>"Output prefix"},
+    {OPT=>"maxhap=i",    VAR=>\$maxhap,     DEFAULT=>100,     DESC=>"Largest haplotype to decompose"},
     {OPT=>"mask=s",      VAR=>\$bed,        DEFAULT=>'',      DESC=>"BED file of sites to mask"},
     {OPT=>"gap-char=s",  VAR=>\$gap_char,   DEFAULT=>'-',     DESC=>"Gap/deletion character"},
     {OPT=>"mask-char=s", VAR=>\$mask_char,  DEFAULT=>'X',     DESC=>"Masking character"},
