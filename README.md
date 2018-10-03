@@ -3,10 +3,10 @@
 ![Don't judge me](https://img.shields.io/badge/Language-Perl_5-steelblue.svg)
 
 # Snippy
-Rapid haploid variant calling and core SNP phylogeny
+Rapid haploid variant calling and core genome alignment
 
 ## Author
-Torsten Seemann (@torstenseemann)
+[Torsten Seemann](https://twitter.com/torstenseemann)
 
 ## Synopsis
 
