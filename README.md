@@ -477,11 +477,11 @@ Please submit suggestions and bug reports to the
 * freebayes >= 1.1 (freebayes, freebayes-parallel, fasta_generate_regions.py)
 * vcflib >= 1.0 (vcfstreamsort, vcfuniq, vcffirstheader)
 * [vt](https://genome.sph.umich.edu/wiki/Vt) >= 0.5
+* [readseq](http://iubio.bio.indiana.edu/soft/molbio/readseq/java/) >= 2.0
 * snpEff >= 4.3
 * samclip >= 0.2
 * seqtk >= 1.2
 * snp-sites >= 2.0
-* EMBOSS >= 6.0 (for the `seqret` command)
 * wgsim >= 1.8 (for testing only - `wgsim` command)
 
 ## Bundled binaries

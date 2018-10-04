@@ -35,7 +35,7 @@ core.txt : S1/snps.tab S2/snps.tab S3/snps.tab S4/snps.tab
 		$< $@ $(subst R2,R1,$@) > $(@D)/dwgsim.tab
 
 %.fna : %.gbk
-	seqret -auto -filter -osformat2 fasta < $< > $@
+	readseq -a -C -f=fa -pipe -v < $< > $@
 
 bigtest/snps.tab : genome.fa reads_R1.fq.gz reads_R2.fq.gz
 	$(SNIPPY) --force --cpus 36 --outdir bigtest --ref $(word 1,$^) --R1 $(word 2,$^) --R2 $(word 3,$^)
@@ -54,6 +54,5 @@ reads_R2.fq.gz :
 
 clean :
 	rm -fr ./bigtest core*.* ./S{1,2,3,4}
-
 
 	
