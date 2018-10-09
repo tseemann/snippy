@@ -1,0 +1,177 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use Getopt::Std;
+use File::Basename;
+
+#......................................................................................
+
+our $VERSION = "0.1.2";
+our $EXE = basename($0);
+our $FORMAT = "%a %d";
+
+#......................................................................................
+
+sub usage {
+  my($errcode) = @_;
+  $errcode ||= 0;
+  my $ofh = $errcode ? \*STDERR : \*STDOUT;
+  print $ofh 
+    "SYNOPSIS\n  Convert a Genbank/FASTA/GFF file into a FASTA file\n",
+    "USAGE\n  $EXE [options] file.{gb,fa,gff} > output.fasta\n",
+    "OPTIONS\n",
+    "  -h       Print this help\n",
+    "  -v       Print version and exit\n",
+    "  -q       No output while running, only errors\n",
+    "  -f STR   FASTA ID format, default='$FORMAT' (Genbank input only)\n",
+    "  -n       Replace ambiguous IUPAC letters with 'N'\n",
+    "  -l       Lowercase the sequence\n",
+    "  -u       Uppercase the sequence\n",
+    "FORMAT CODES\n",
+    "  %a    Accession  eg. NC_000913\n",
+    "  %v    Accession with version  eg. NC_000913.1\n",
+    "  %o    Organism  eg. Escherichia coli str. K-12 substr. MG1655\n",
+    "  %d    Definition  eg. Escherichia coli str. K-12 substr. MG1655, complete genome\n",
+    "END\n";
+  exit($errcode);
+}
+
+sub version {
+  print "$EXE $VERSION\n";
+  exit(0);
+}
+
+#......................................................................................
+
+my %opt;
+getopts('vhqnluf:', \%opt) or exit(-1);
+$opt{v} and version();
+$opt{h} and usage(0);
+@ARGV or usage(1);
+
+#......................................................................................
+
+sub msg {
+  print STDERR "@_\n" unless $opt{q};
+}
+
+sub err {
+  print STDERR "ERROR: @_\n";
+  exit(-1);
+}
+
+#......................................................................................
+
+msg("This is $EXE $VERSION");
+
+# read whole file
+my @line = <ARGV>;
+my $lines = scalar(@line);
+$lines or err("The input is empty");
+msg("Read $lines lines from input");
+
+# detect format from first line
+if ($line[0] =~ m/^LOCUS/) { parse_genbank() }
+elsif ($line[0] =~ m/^>/) { parse_fasta() }
+elsif ($line[0] =~ m/^##gff/) { parse_gff() }
+else { err("Could not determine input sequence format: $line[0]") }
+
+msg("Done.");
+exit(0);
+
+#......................................................................................
+
+sub purify {
+  my($dna) = @_;
+  $dna =~ s/[^ATGCN\n\r]/N/gi if $opt{n};
+  $dna = lc($dna) if $opt{l};
+  $dna = uc($dna) if $opt{u};
+  return $dna;
+}
+
+#......................................................................................
+
+sub parse_fasta {
+  my $count=0;
+  for my $line (@line) {
+    if ($line =~ m/^>/) {
+      $count++;
+    }
+    else {
+      $line = purify($line);
+    }
+    print $line;
+  }
+  msg("Found $count sequences in FASTA file.");
+}
+
+#......................................................................................
+
+sub parse_gff {
+  my $at_seq = 0;
+  for my $line (@line) {
+    $at_seq++ if $line =~ m/^>/;
+    print $line if $at_seq;;
+  }
+  if ($at_seq > 0) {
+    msg("Found $at_seq sequences in GFF file.");
+  }
+  else {
+    err("No sequences found in GFF file!");
+  }
+}
+
+#......................................................................................
+
+sub parse_genbank {
+  my $acc = '';
+  my $accver = '';
+  my $org = '';
+  my $def = '';
+  my $in_seq = 0;
+  my $dna = '';
+  my $count = 0;
+
+  foreach (@line) {
+    chomp;
+    if (m{^//}) {
+      my $id = $opt{f} || $FORMAT;
+      $id =~ s/%a/$acc/g;
+      $id =~ s/%v/$accver/g;
+      $id =~ s/%o/$org/g;
+      $id =~ s/%d/$def/;
+      $dna = purify($dna);
+      print ">", $id, "\n", $dna;
+      $count++;
+      $in_seq = 0;
+      $dna =  $acc = $accver = $org = $def = '';
+      next;
+    }
+    elsif (m/^ORIGIN/) {
+      $in_seq = 1;
+      next;
+    }
+    
+    if ($in_seq) {
+      my $s = substr $_, 10;
+      $s =~ s/\s//g;
+      $dna .= $s;
+      $dna .= "\n";
+    }
+    else {
+      if (m/^VERSION\s+(\S+?\.\d+)\b/) {
+        $accver = $1;
+      }
+      elsif (m/^SOURCE\s+(.*)$/) {
+        $org = $1;
+      }
+      elsif (m/^LOCUS\s+(\S+)/) {
+        $acc = $1;
+      }
+      elsif (m/^DEFINITION\s+(.*)$/) {
+        $def = $1;
+      }
+    }
+  }
+  msg("Found $count sequences in GENBANK file.");
+}
