@@ -46,7 +46,7 @@ msg("Obtained from $URL");
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # check for needed exes
 
-for my $exe (qw(readseq samtools minimap2 bedtools snp-sites)) {
+for my $exe (qw(any2fasta samtools minimap2 bedtools snp-sites)) {
   my($which) = qx(which $exe 2> /dev/null);
   $which or err("Can not find required '$exe' in PATH");
   chomp $which;
@@ -82,7 +82,7 @@ $aformat and wrn("$EXE $VERSION does not support the --aformat option; using 'fa
 my $infasta = $fasta;
 $fasta = "$out_prefix.ref.fa";
 msg("Saving reference FASTA: $fasta");
-system("readseq -a -C -f=fa -pipe < '$infasta' > '$fasta'")==0
+system("any2fasta -n -u -f '%a' '$infasta' > '$fasta'")==0
   or err("Could not convert $infasta to FASTA format");
 
 my($chrom,$chrom_list) = load_fasta_hash($fasta, 1);  # 1=uppercase
