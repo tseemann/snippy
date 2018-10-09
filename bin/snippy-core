@@ -20,6 +20,7 @@ my $VERSION = Snippy::Version->version;
 my $EXE = $FindBin::RealScript;
 my $URL = "http://github.com/tseemann/snippy";
 my @CMDLINE = (basename($EXE), @ARGV);
+my $APPDIR = dirname($FindBin::RealBin);
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Small util functions
@@ -42,6 +43,10 @@ setOptions();
 
 msg("This is $EXE $VERSION");
 msg("Obtained from $URL");
+
+# needed to pass --check for new 'any2fasta'
+msg("Enabling bundled tools.");
+$ENV{PATH} = $ENV{PATH}.":$APPDIR/binaries/noarch";
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # check for needed exes
