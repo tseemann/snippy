@@ -164,6 +164,7 @@ my @id;
 my $id_counter=0;
 
 for my $dir (@ARGV) {
+  -d $dir or err("Sample '$dir' is not a folder, seems to be a file?");
   my $ipx = guess_prefix($dir) or err("Could not find .aligned.fa/.vcf in $dir");
   my $vcf = "$dir/$ipx.vcf";
   -r $vcf or err("Could not read VCF '$vcf'");
