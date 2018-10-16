@@ -73,7 +73,7 @@ $ENV{PATH} = "$BINDIR:"
 
 for my $exe (qw(bwa bcftools samtools java snpEff samclip seqtk
                 parallel freebayes freebayes-parallel fasta_generate_regions.py 
-                vcfstreamsort vcfuniq vcffirstheader gzip vt bedtools
+                vcfstreamsort vcfuniq vcffirstheader gzip vt
                 snippy-vcf_to_tab snippy-vcf_report)) {
   my($which) = qx(which $exe 2> /dev/null);
   $which or err("Can not find required '$exe' in PATH");
