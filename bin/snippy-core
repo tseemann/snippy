@@ -87,7 +87,7 @@ $aformat and wrn("$EXE $VERSION does not support the --aformat option; using 'fa
 my $infasta = $fasta;
 $fasta = "$out_prefix.ref.fa";
 msg("Saving reference FASTA: $fasta");
-system("any2fasta -n -u -f '%a' '$infasta' > '$fasta'")==0
+system("any2fasta -n -u '$infasta' > '$fasta'")==0
   or err("Could not convert $infasta to FASTA format");
 
 my($chrom,$chrom_list) = load_fasta_hash($fasta, 1);  # 1=uppercase
