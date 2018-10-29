@@ -237,7 +237,7 @@ msg("Wrote $nfeat features to ref.gff");
 if ($ctgs) {
   # ideally we would use paftools.js or nucmer here instead
   msg("Shredding $reads[0] into pseudo-reads");
-  my $FAKE_READ_COV = 20;
+  my $FAKE_READ_COV = 2 * $mincov; # https://github.com/tseemann/snippy/issues/253
   # we halve the coverage as we will take 2 reads for each stride (fwd + rev)
   my $stride = $FAKE_READ_LEN / (0.5 * $FAKE_READ_COV);
   my $counter=0;
