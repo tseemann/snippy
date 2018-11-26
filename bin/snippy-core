@@ -263,6 +263,7 @@ for my $chr (@$chrom_list) {
     for my $id (@id) {
       # check if this site has sample support ie. not -,N,n etc
       my $ac = substr( $seq{$id}{$chr}, $pos-1, 1 );
+      $ac or err("Could not extract base $chr:".($pos-1)." for isolate $id");
       next POS unless $ac =~ m/[AGTC]/i;
       # get ALT
       my $alt = $var{$chr}{$pos}{$id};
@@ -313,11 +314,6 @@ for my $id ('Reference', @id) {
 }
 save_fasta_hash($full_aln, \%out);
 
-my $core_aln = "$out_prefix.aln";
-my $cmd = "snp-sites -c -o $core_aln $full_aln";
-msg("Running: $cmd");
-system($cmd)==0 or err("Could not run: $cmd"); 
-
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # PREFIX.txt file
 my @stats = ([ qw(ID LENGTH ALIGNED UNALIGNED VARIANT HET MASKED LOWCOV) ]);
@@ -334,6 +330,13 @@ for my $id (@id) {
  ];
 }
 matrix_to_tsv("$out_prefix.txt", \@stats);
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# Create the core snps AFTER the .txt file in case this fails (D.Ingle)
+my $core_aln = "$out_prefix.aln";
+my $cmd = "snp-sites -c -o $core_aln $full_aln";
+msg("Running: $cmd");
+system($cmd)==0 or err("Could not run: $cmd");
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Goodbye
