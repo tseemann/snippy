@@ -34,7 +34,7 @@ while (<$tabfh>) {
   -r $r1 or err("[$id] unreadable file '$r1'");
   $r1 = abs_path($r1);
   if (defined $r2) {
-    -r $r2 or err("[$id] unreadable file '$r1'");
+    -r $r2 or err("[$id] unreadable file '$r2'");
     $r2 = abs_path($r2);
     push @cmd, "$snippy --R1 '$r1' --R2 '$r2'";
   }
