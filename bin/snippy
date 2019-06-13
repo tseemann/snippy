@@ -15,7 +15,7 @@ use File::Basename;
 use File::Copy;
 use Bio::SeqIO;
 use Bio::Tools::GFF;
-use Cwd;
+use Cwd qw(abs_path getcwd);
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # global variables
@@ -115,7 +115,7 @@ $prefix =~ m{/} and err("File --prefix can not have slash '/' in it.");
 
 $reference or err("Please supply a reference FASTA/GBK/EMBL file with --reference");
 -r $reference or err("Invalid --reference filename");
-$reference = File::Spec->rel2abs($reference);
+$reference = abs_path($reference);
 msg("Using reference: $reference");
 my $ref_fmt = guess_format($reference) or err("Could not guess format '$reference'");
 msg("Treating reference as '$ref_fmt' format.");
@@ -137,7 +137,7 @@ $maxsoft >= 0 or err("--maxsoft must be a positive integer");
 
 my @reads;
 if ($bam) {
-  $bam = File::Spec->rel2abs($bam);
+  $bam = abs_path($bam);
   -r $bam or err("Can not read BAM '$bam'");
   msg("Using BAM file '$bam' instead of aligning reads.");
 }
@@ -145,10 +145,14 @@ else {
   for my $readfn ($pe1, $pe2, $se, $peil, $ctgs) {
     next unless $readfn;
     -r $readfn or err("Can not read sequence file: $readfn");
-    push @reads, File::Spec->rel2abs($readfn);
+    push @reads, abs_path($readfn);
   }
   msg("Using read file: $_") for @reads;
 }
+
+$tmpdir or err("Please provide a valid --tmpdir");
+-d $tmpdir or err("--tmpdir '$tmpdir' is not a directory");
+$tmpdir = abs_path($tmpdir);
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # prepare output folder
