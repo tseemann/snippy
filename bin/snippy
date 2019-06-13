@@ -341,9 +341,9 @@ $fbopt .= " -t '$targets'" if $targets;
 #my $bcf_filter = qq{FMT/GT="1/1" && FMT/DP>=$mincov && AB<$minfrac};
 my $bcf_filter = qq{FMT/GT="1/1" && QUAL>=$minqual && FMT/DP>=$mincov && (FMT/AO)/(FMT/DP)>=$minfrac};
 
-my $sort_temp = "-T $tmpdir/snippy.$$.";
+my $sort_temp = "-T $tmpdir";
 my $sort_cpus = min($cpus, 16);
-my $sort_ram = "-m ".sprintf("%dM", 1000*$ram/$sort_cpus);
+my $sort_ram = "-m ".sprintf("%dM", 1000*$ram/$sort_cpus/2);
 $sort_cpus = "--threads $sort_cpus";
 my $sortopt = "-l 0 $sort_temp $sort_cpus $sort_ram";
 
