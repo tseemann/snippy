@@ -755,7 +755,7 @@ sub usage {
 
   print "SYNOPSIS\n  $EXE $VERSION - $SYNOPSIS\n",
         "USAGE\n",
-        "  $EXE [options] --outdir <dir> --ref <ref> --R1 <R1.fq.gz> --R1 <R2.fq.gz>\n",
+        "  $EXE [options] --outdir <dir> --ref <ref> --R1 <R1.fq.gz> --R2 <R2.fq.gz>\n",
         "  $EXE [options] --outdir <dir> --ref <ref> --ctgs <contigs.fa>\n",
         "  $EXE [options] --outdir <dir> --ref <ref> --bam <reads.bam>\n",
         "";
