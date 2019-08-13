@@ -4,9 +4,9 @@ import sys
 
 
 if len(sys.argv) == 1:
-    print "usage: ", sys.argv[0], " <fasta file or index file> <region size>"
-    print "generates a list of freebayes/bamtools region specifiers on stdout"
-    print "intended for use in creating cluster jobs"
+    print("usage: ", sys.argv[0], " <fasta file or index file> <region size>")
+    print("generates a list of freebayes/bamtools region specifiers on stdout")
+    print("intended for use in creating cluster jobs")
     exit(1)
 
 fasta_index_file = sys.argv[1]
@@ -29,7 +29,7 @@ for line in fasta_index_file:
         end = region_start + region_size
         if end > chrom_length:
             end = chrom_length
-        print chrom_name + ":" + str(region_start) + "-" + str(end)
+        print(chrom_name + ":" + str(region_start) + "-" + str(end))
         region_start = end
 
 
