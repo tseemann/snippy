@@ -393,7 +393,7 @@ my @cmd = (
 #   " > $prefix.filt.vcf",
   # call consequences
   ( $nfeat > 0 ? "snpEff ann -noLog -noStats -no-downstream -no-upstream -no-utr"
-                 ." -t -c $refdir/snpeff.config -dataDir . ref $prefix.filt.vcf > $prefix.vcf" 
+                 ." -c $refdir/snpeff.config -dataDir . ref $prefix.filt.vcf > $prefix.vcf" 
                : "cp $prefix.filt.vcf $prefix.vcf" ),
   # prepare output files
   "$BINDIR/snippy-vcf_to_tab --gff $refdir/ref.gff --ref $refdir/ref.fa --vcf $prefix.vcf > $prefix.tab",
