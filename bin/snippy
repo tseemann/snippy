@@ -100,6 +100,7 @@ sub parse_version {
 parse_version( 'samtools --version',  1.7, qr/samtools\s(\d+\.\d+)/ms );
 parse_version( 'bcftools --version',  1.7, qr/bcftools\s(\d+\.\d+)/ms );
 parse_version( 'freebayes --version', 1.1, qr/\sv(\d+\.\d+)/ms        );
+parse_version( 'java -version',  1.8, qr/version\D+(\d+\.\d+)/ms );
 parse_version( 'snpEff -version',     4.3, qr/(\d+\.\d+)/ms           );
 parse_version( 'bwa',  7.12, qr/Version:\s+0.(\d+\.\d+)/ms );
 
