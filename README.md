@@ -318,7 +318,9 @@ or recombination-removal tool:
 * If you want to mask certain regions of the genome, you can provide a BED file
   with the `--mask` parameter. Any SNPs in those regions will be excluded. This
   is common for genomes like *M.tuberculosis* where pesky repetitive PE/PPE/PGRS
-  genes cause false positives, or masking phage regions.
+  genes cause false positives, or masking phage regions. A `--mask` bed file
+  for *M.tb* is provided with Snippy in the `etc/Mtb_NC_000962.3_mask.bed`
+  folder. It is derived from the XLSX file from https://gph.niid.go.jp/tgs-tb/
 * If you use the `snippy --cleanup` option the reference files will be deleted.
   This means `snippy-core` can not "auto-find" the reference. In this case you
   simply use `snippy-core --reference REF` to provide the reference in FASTA format.
