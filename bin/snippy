@@ -408,7 +408,8 @@ my @cmd = (
 );
 
 if ($unmapped) {
-  push @cmd, "samtools fastq -f 12 -v 20 -@ 3 -c 5 -N"
+  my $qcpus = min(3, $cpus);
+  push @cmd, "samtools fastq -f 12 -v 20 --threads $qcpus -c 5 -N"
             ." -s $prefix.unmapped_SE.fq.gz"
             ." -0 $prefix.unmapped_R0.fq.gz"
             ." -1 $prefix.unmapped_R1.fq.gz -2 $prefix.unmapped_R2.fq.gz"
