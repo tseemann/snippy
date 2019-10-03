@@ -336,8 +336,7 @@ $bwaopt .= ' -p' if $peil;
 $fbopt = "-p 2 -P 0 -C $mincov --min-repeat-entropy 1.5 --strict-vcf".
          " -q $basequal -m $mapqual --min-coverage $mincov -F 0.05".
          " $fbopt";  # append --fbopt from command line to override previous
-$targets = abs_path($targets);
-$fbopt .= " -t '$targets'" if $targets;
+$fbopt .= sprintf " --targets '%s'", abs_path($targets) if $targets;
 
 # rules to extract good SNPs from the above freebayes
 # can't use AF here as freebayes only uses 0, 0.5, 1
@@ -345,7 +344,8 @@ $fbopt .= " -t '$targets'" if $targets;
 my $bcf_filter = qq{FMT/GT="1/1" && QUAL>=$minqual && FMT/DP>=$mincov && (FMT/AO)/(FMT/DP)>=$minfrac};
 
 my $sort_temp = "-T $tmpdir";
-my $sort_cpus = min($cpus, 16);
+# -@ = _additional_ CPUs: https://github.com/tseemann/snippy/issues/276
+my $sort_cpus = max(1, min($cpus, 16)-1);
 my $sort_ram = "-m ".sprintf("%dM", 1000*$ram/$sort_cpus/2);
 $sort_cpus = "--threads $sort_cpus";
 my $sortopt = "-l 0 $sort_temp $sort_cpus $sort_ram";
