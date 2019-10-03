@@ -175,6 +175,12 @@ for my $dir (@ARGV) {
   
   msg("$id: loading snippy alignment from $afa") if $debug;
   ($seq{$id}) = load_fasta_hash($afa, 0);  # load snippy alignment (no uppercase)
+
+  # Check ref matches afa - https://github.com/tseemann/snippy/issues/247
+  for my $label (keys %{ $seq{$id} }) {
+    exists($chrom->{$label}) or err("$afa has entry '$label' but $infasta doesn't.");
+  }
+
   my $unal = sum( map { $seq{$id}{$_} =~ tr/-/-/ } @$chrom_list );
   my $nhet = sum( map { $seq{$id}{$_} =~ tr/n/n/ } @$chrom_list );
   my($ndel,$nins,$nsnp) = (0,0,0);
