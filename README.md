@@ -156,7 +156,7 @@ complex | Combination of snp/mnp | ATTC => GTTA
 ## The variant caller
 
 The variant calling is done by
-[Freebayes](https://github.com/ekg/freebayes).  
+[Freebayes](https://github.com/ekg/freebayes).
 The key parameters under user control are:
 
 * `--mincov` - the minimum number of reads covering a site to be considered (default=10)
@@ -470,7 +470,7 @@ Please submit suggestions and bug reports to the
 ## Requirements
 
 * Perl >= 5.12
-* Perl Modules: Time::Piece (core with modern Perl), Bioperl >= 1.6
+* Perl Modules: Time::Piece (core with modern Perl), Bioperl >= 1.7
 * bwa mem >= 0.7.12 
 * minimap2 >= 2.0
 * samtools >= 1.7
@@ -480,7 +480,6 @@ Please submit suggestions and bug reports to the
 * freebayes >= 1.1 (freebayes, freebayes-parallel, fasta_generate_regions.py)
 * vcflib >= 1.0 (vcfstreamsort, vcfuniq, vcffirstheader)
 * [vt](https://genome.sph.umich.edu/wiki/Vt) >= 0.5
-* [readseq](http://iubio.bio.indiana.edu/soft/molbio/readseq/java/) >= 2.0
 * snpEff >= 4.3
 * samclip >= 0.2
 * seqtk >= 1.2
