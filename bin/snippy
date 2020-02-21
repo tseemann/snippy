@@ -359,7 +359,7 @@ sub consensus_commands {
   return (
     "bcftools convert -Oz -o $vcf.gz $vcf",
     "bcftools index -f $vcf.gz",
-    "bcftools consensus -f $ref -o $fasta $vcf.gz",
+    "bcftools consensus --sample $rgid -f $ref -o $fasta $vcf.gz",
     $nuke ? "rm -f $vcf.gz $vcf.gz.csi $vcf.gz.tbi" : (),
   );
 }
