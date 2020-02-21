@@ -334,8 +334,8 @@ $bwaopt .= ' -p' if $peil;
 # - we can filter on $mincov because later samtools depth will
 #   replace any sites 0 < mincov < DP with 'N', and 0 with '-'.
 
-$fbopt = "-p 2 -P 0 -C $mincov --min-repeat-entropy 1.5 --strict-vcf".
-         " -q $basequal -m $mapqual --min-coverage $mincov -F 0.05".
+$fbopt = "-p 2 -P 0 -C 2 -F 0.05 --min-coverage $mincov".
+         " --min-repeat-entropy 1.0 -q $basequal -m $mapqual --strict-vcf ".
          " $fbopt";  # append --fbopt from command line to override previous
 $fbopt .= sprintf " --targets '%s'", abs_path($targets) if $targets;
 
