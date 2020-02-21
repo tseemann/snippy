@@ -2,6 +2,7 @@
 use 5.18.0; # for Time::Seconds
 use strict;
 use warnings;
+use version;
 use FindBin;
 use lib "$FindBin::RealBin/../perl5";
 ###LINE_FOR_BREW_CONDA###
@@ -93,16 +94,16 @@ sub parse_version {
   #msg("parse=[$blob]");
   $blob =~ $re;
   my $ver = defined $1 ? $1 : 0;
-  err("Need $cmd >= $min but you have $ver - please upgrade it.") if $ver < $min;
+  err("Need $cmd >= $min but you have $ver - please upgrade it.")
+    if version->parse("v$ver") < version->parse("v$min");
   msg("Checking version: $cmd is >= $min - ok, have $ver");
   return $ver;
 }
-parse_version( 'samtools --version',  1.7, qr/samtools\s(\d+\.\d+)/ms );
-parse_version( 'bcftools --version',  1.7, qr/bcftools\s(\d+\.\d+)/ms );
-parse_version( 'freebayes --version', 1.1, qr/\sv(\d+\.\d+)/ms        );
-parse_version( 'java -version',  1.8, qr/version\D+(\d+\.\d+)/ms );
-parse_version( 'snpEff -version',     4.3, qr/(\d+\.\d+)/ms           );
-parse_version( 'bwa',  7.12, qr/Version:\s+0.(\d+\.\d+)/ms );
+parse_version( 'samtools --version',  '1.7', qr/samtools\s(\d+\.\d+)/ms );
+parse_version( 'bcftools --version',  '1.7', qr/bcftools\s(\d+\.\d+)/ms );
+parse_version( 'freebayes --version', '1.1', qr/\sv(\d+\.\d+.\d+)/ms    );
+parse_version( 'snpEff -version',     '4.3', qr/(\d+\.\d+)/ms           );
+parse_version( 'bwa',              '0.7.12', qr/Version:\s+(\d+.\d+\.\d+)/ms );
 
 # quit now if --check was provided
 if ($check) {
