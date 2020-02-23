@@ -669,7 +669,7 @@ sub err {
 #----------------------------------------------------------------------
 
 sub version {
-  print STDERR "$EXE $VERSION\n";
+  print "$EXE $VERSION\n";
   exit;
 }
 
