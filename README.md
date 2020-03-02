@@ -474,8 +474,8 @@ Please submit suggestions and bug reports to the
 * bwa mem >= 0.7.12 
 * minimap2 >= 2.0
 * samtools >= 1.7
-* bedtools >= 2.0
 * bcftools >= 1.7
+* bedtools >= 2.0
 * GNU parallel >= 2013xxxx
 * freebayes >= 1.1 (freebayes, freebayes-parallel, fasta_generate_regions.py)
 * vcflib >= 1.0 (vcfstreamsort, vcfuniq, vcffirstheader)
