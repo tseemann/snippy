@@ -44,9 +44,9 @@ setOptions();
 msg("This is $EXE $VERSION");
 msg("Obtained from $URL");
 
-# needed to pass --check for new 'any2fasta'
-msg("Enabling bundled tools.");
-$ENV{PATH} = $ENV{PATH}.":$APPDIR/binaries/noarch";
+# needed to pass --check for new 'any2fasta' and 'samtools'
+msg("Enabling bundled tools for $^O");
+$ENV{PATH} = $ENV{PATH}.":$APPDIR/binaries/noarch:$APPDIR/binaries/$^O";
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # check for needed exes
