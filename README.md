@@ -469,8 +469,8 @@ Please submit suggestions and bug reports to the
 
 ## Requirements
 
-* Perl >= 5.12
-* Perl Modules: Time::Piece (core with modern Perl), Bioperl >= 1.7
+* perl >= 5.18
+* bioperl >= 1.7
 * bwa mem >= 0.7.12 
 * minimap2 >= 2.0
 * samtools >= 1.7
@@ -484,6 +484,7 @@ Please submit suggestions and bug reports to the
 * samclip >= 0.2
 * seqtk >= 1.2
 * snp-sites >= 2.0
+* any2fasta >= 0.4
 * wgsim >= 1.8 (for testing only - `wgsim` command)
 
 ## Bundled binaries
