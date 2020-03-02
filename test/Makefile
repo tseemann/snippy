@@ -13,6 +13,7 @@ SNIPPY = ../bin/snippy --cpus $(CPUS)
 SNIPPYCORE = ../bin/snippy-core
 R1 = reads_R1.fastq.gz
 R2 = reads_R2.fastq.gz
+WGSIM = wgsim
 
 GBK=example.gbk
 REF=example.fna
@@ -30,9 +31,9 @@ core.txt : S1/snps.tab S2/snps.tab S3/snps.tab S4/snps.tab
 
 %/R1.fq %/R2.fq : $(REF)
 	mkdir -p $(@D)
-	wgsim -S $(shell echo $(@D) | sed 's/[^0-9]//g') \
-		-h -r 0.005 -N 12000 -1 100 -2 100 -d 200 \
-		$< $@ $(subst R2,R1,$@) > $(@D)/dwgsim.tab
+	$(WGSIM) -S $(shell echo $(@D) | sed 's/[^0-9]//g') \
+		 -h -r 0.005 -N 12000 -1 100 -2 100 -d 200 \
+		 $< $@ $(subst R2,R1,$@) > $(@D)/dwgsim.tab
 
 %.fna : %.gbk
 	readseq -a -C -f=fa -pipe -v < $< > $@
