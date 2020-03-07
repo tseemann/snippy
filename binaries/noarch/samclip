@@ -7,10 +7,20 @@ use File::Basename;
 use Data::Dumper;
 
 #----------------------------------------------------------------------
+# the sitch
+#                      1     6     11    16    21    26  30
+# contig:              NNNNN NNNNN NNNNN NNNNN NNNNN NNNNN
+#
+# 11,20,+   10M                    xxxxx xxxxx
+# 11,20,+   6M4S                   xxxxx x----
+# 11,20,+   4S6M                   ----x xxxxx
+# 11,20,+   3S5M2S                 ---xx xxx--
+
+#----------------------------------------------------------------------
 # globals
 
 my $EXE = basename($0);
-my $VERSION = "0.2";
+my $VERSION = "0.4.0";
 my $AUTHOR = 'Torsten Seemann (@torstenseemann)';
 my $HOMEPAGE = "https://github.com/tseemann/samclip";
 
@@ -113,14 +123,17 @@ while (my $line = <ARGV>) {
     my $start = $sam[SAM_POS];
     my $end = $start + length($sam[SAM_SEQ]) - 1;
     my $contiglen = $len->{$sam[SAM_RNAME]} or err("Reference", $sam[SAM_RNAME], "not in '$ref'");
-    msg("CHROM=$sam[SAM_RNAME]:1-$contiglen POS=$start..$end CIGAR=$sam[SAM_CIGAR] HL=$HL SL=$SL SR=$SR HR=$HR max=$max)") if $debug;
-    unless ($start == 0 or $end >= $contiglen) {
-      if ($HL+$SL > $max or $HR+$SR > $max) {
-        $removed++;
-        next;
-      }
+    my $L = $HL + $SL;
+    my $R = $HR + $SR;
+    $L = 0 if $start <= 1+$L;
+    $R = 0 if $end >= $contiglen-$R;
+    my $info = $debug ? "CHROM=$sam[SAM_RNAME]:1..$contiglen POS=$start..$end CIGAR=$sam[SAM_CIGAR] L=$L R=$R | HL=$HL SL=$SL SR=$SR HR=$HR max=$max)" : "need --debug";
+    if ($L > $max or $R > $max) {
+      msg("BAD! $info") if $debug;
+      $removed++;
+      next;
     }
-    msg("^^^ KEPT") if $debug;
+    msg("GOOD $info") if $debug;
     # otherwise pass through untouched
     print $line if $invert;
     $kept++;
