@@ -1,9 +1,3 @@
-language: perl
-
-sudo: false
-
-perl:
-    - "5.26"
 
 addons:
     apt:
@@ -11,26 +5,11 @@ addons:
             - libstdc++6
             - liblzma5
             - libbz2-1.0
-            - emboss
-            - bedtools
             - curl
-            - seqtk
-            - autoconf
-            - g++
-            - libtool
+            - bioperl
 
 install:
-    - "cpanm --quiet --notest Bio::Perl"
-    - "export BINDIR=$PWD/bin"
-    - "curl -L https://downloads.sourceforge.net/project/samtools/samtools/1.0/samtools-bcftools-htslib-1.0_x64-linux.tar.bz2 | tar jxf -"
-    - "ln -s $PWD/samtools-bcftools-htslib-1.0_x64-linux/bin/wgsim $BINDIR/wgsim"
-    - "curl -L https://github.com/lh3/minimap2/releases/download/v2.11/minimap2-2.11_x64-linux.tar.bz2 | tar jxf -"
-    - "ln -s $PWD/minimap2-2.11_x64-linux/minimap2 $BINDIR/minimap2"
-    - "curl -L https://github.com/sanger-pathogens/snp-sites/archive/v2.4.0.tar.gz | tar zxf -"
-    - "(cd snp-sites-2.4.0 && autoreconf -i -f && ./configure --prefix=$BINDIR/.. && make -j install)"
-    - "curl -L https://github.com/atks/vt/archive/0.5772.tar.gz | tar zxf -"
-    - "make -j -C vt-0.5772 && ln -s $PWD/vt-0.5772/vt $BINDIR/vt";
-    - "export PATH=$BINDIR:$PATH"
+    - "export PATH=$PWD/bin:$PWD/binaries/linux:$PATH"
 
 script:
     - "! (ldd $PWD/binaries/linux/freebayes | grep 'not found')"
