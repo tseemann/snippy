@@ -9,7 +9,7 @@ addons:
             - bioperl
 
 install:
-    - "export PATH=$PWD/bin:$PWD/binaries/linux:$PATH"
+    - "export PATH=$PWD/bin:$PWD/binaries/noarch:$PWD/binaries/linux:$PATH"
 
 script:
     - "! (ldd $PWD/binaries/linux/freebayes | grep 'not found')"
