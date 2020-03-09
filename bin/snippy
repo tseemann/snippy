@@ -439,6 +439,7 @@ sub append_to_file {
 }
 
 my $log_file = "$prefix.log";
+unlink $log_file if -r $log_file; # https://github.com/tseemann/snippy/issues/365
 append_to_file($log_file, "### echo snippy $VERSION\n");
 append_to_file($log_file, "### cd $ORIGDIR\n\n### @CMDLINE\n");
 
