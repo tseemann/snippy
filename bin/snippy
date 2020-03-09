@@ -380,9 +380,9 @@ my @cmd = (
   ($bam ? "samtools view -h -O SAM \Q$bam\E" : "bwa mem $bwaopt -t $cpus $refdir/ref.fa @reads")
     ." | samclip --max $maxsoft --ref $refdir/ref.fa.fai"
     ." | samtools sort -n $sortopt"
-    ." | samtools fixmate -m - -"
+    ." | samtools fixmate -m $sort_cpus - -"
     ." | samtools sort $sortopt"
-    ." | samtools markdup $sort_temp -r -s - -"
+    ." | samtools markdup $sort_temp $sort_cpus -r -s - -"
     ." > $prefix.bam",
   "samtools index $prefix.bam",
   # call variants
