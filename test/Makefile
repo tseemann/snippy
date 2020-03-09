@@ -8,8 +8,10 @@ MAKEFLAGS += --no-builtin-variables
 .ONESHELL:
 .DEFAULT: all
 
-CPUS = 1
-SNIPPY = ../bin/snippy --cpus $(CPUS)
+CPUS = 2
+RAM = 2
+
+SNIPPY = ../bin/snippy --cpus $(CPUS) --ram $(RAM)
 SNIPPYCORE = ../bin/snippy-core
 R1 = reads_R1.fastq.gz
 R2 = reads_R2.fastq.gz
