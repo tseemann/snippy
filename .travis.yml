@@ -1,3 +1,4 @@
+language: generic
 
 addons:
     apt:
@@ -5,7 +6,6 @@ addons:
             - libstdc++6
             - liblzma5
             - libbz2-1.0
-            - curl
             - bioperl
 
 install:
@@ -17,8 +17,7 @@ script:
     - "! (ldd $PWD/binaries/linux/samtools  | grep 'not found')"
     - "! (ldd $PWD/binaries/linux/bcftools  | grep 'not found')"
     - "snippy --version"
-    - "! snippy --doesnotexist"
-    - "snippy --help"
     - "snippy --check"
     - "snippy-core --version"
+    - "snippy-core --check"
     - "make -C test"

@@ -23,11 +23,11 @@ all: core.txt
 	wc -l S?/snps.tab
 
 core.txt : S1/snps.tab S2/snps.tab S3/snps.tab S4/snps.tab
-	$(SNIPPYCORE) --prefix core --ref $(REF) S1 S2 S3 S4 2> core.log
-	$(SNIPPYCORE) --prefix core-mask --ref $(REF) --mask $(BED) S1 S2 S3 S4 2> core-mask.log
+	$(SNIPPYCORE) --prefix core --ref $(REF) S1 S2 S3 S4
+	$(SNIPPYCORE) --prefix core-mask --ref $(REF) --mask $(BED) S1 S2 S3 S4
 
 %/snps.tab : %/R1.fq %/R2.fq
-	$(SNIPPY) --force --ref $(REF) --outdir $(@D) --R1 $(word 1,$^) --R2 $(word 2,$^) 2> $(@D)/snippy.log
+	$(SNIPPY) --force --ref $(REF) --outdir $(@D) --R1 $(word 1,$^) --R2 $(word 2,$^)
 
 %/R1.fq %/R2.fq : $(REF)
 	mkdir -p $(@D)
