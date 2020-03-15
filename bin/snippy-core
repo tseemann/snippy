@@ -348,7 +348,7 @@ system($cmd)==0 or err("Could not run: $cmd");
 # Goodbye
 my @motd = (
   "This analysis is totally hard-core!",
-  "Run 'snp-sites -b -c -o phylo.aln core.full.aln' for IQTree, BEAST, RaxML",
+  "Run 'snp-sites -b -c -o $out_prefix.phylo.aln $out_prefix.full.aln' for IQTree, BEAST, RaxML",
   "You can mask columns using '--mask BEDFILE --mask-char X'",
   "The Snippy manual is at $URL/blob/master/README.md",
   "Found a bug? Post it at $URL/issues",
