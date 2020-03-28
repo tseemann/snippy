@@ -1,0 +1,91 @@
+#!/usr/bin/env perl
+use warnings;
+use strict;
+use FindBin;
+use lib "$FindBin::RealBin/../perl5";
+###LINE_FOR_BREW_CONDA###
+use Snippy::Version;
+use Bio::SeqIO;
+use File::Basename;
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# Globals
+
+my $VERSION = Snippy::Version->version;
+my $EXE = $FindBin::RealScript;
+my $URL = "http://github.com/tseemann/snippy";
+my @CMDLINE = (basename($EXE), @ARGV);
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# Options
+
+my(@Options, $debug, $mask, $case);
+setOptions();
+
+$mask or err("Please provide --mask");
+
+msg("Will output BED regions for runs of '$mask'");
+$mask = quotemeta($mask);
+
+my $in  = Bio::SeqIO->new(-fh=>\*ARGV, -format=>'fasta', -alphabet=>'dna');
+while (my $seq = $in->next_seq) {
+  my $dna = $seq->seq;
+  $dna = uc($dna) unless $case;
+  while ($dna =~ m/([$mask]+)/g) {
+    my $p = pos($dna);
+    my $L = length($1);
+    print join( "\t", $seq->id, $p-$L, $p ),"\n";
+  }
+}
+
+#----------------------------------------------------------------------
+sub msg { print STDERR "@_\n";}
+sub wrn { msg("NOTICE:", @_); }
+sub err { msg("ERROR:", @_); exit(2); }
+
+sub show_version {
+  print "$EXE $VERSION\n";
+  exit(0);
+}
+
+#----------------------------------------------------------------------
+# Option setting routines
+
+sub setOptions {
+  use Getopt::Long;
+
+  @Options = (
+    {OPT=>"help!",       VAR=>\&usage,                       DESC=>"This help"},
+    {OPT=>"version!",    VAR=>\&show_version,                DESC=>"Print version and exit"},
+    {OPT=>"debug!",      VAR=>\$debug,     DEFAULT=>0,       DESC=>"Output verbose debug info"},
+    {OPT=>"mask=s",      VAR=>\$mask,      DEFAULT=>'N-',    DESC=>"Regions with these chars"},
+    {OPT=>"case!",       VAR=>\$case,      DEFAULT=>0,       DESC=>"Be case-sensitive eg. N != n"},
+  );
+
+  (!@ARGV) && (usage());
+
+  &GetOptions(map {$_->{OPT}, $_->{VAR}} @Options) || usage();
+
+  # Now setup default values.
+  foreach (@Options) {
+    if (defined($_->{DEFAULT}) && !defined(${$_->{VAR}})) {
+      ${$_->{VAR}} = $_->{DEFAULT};
+    }
+  }
+}
+
+sub usage {
+  select STDERR;
+  print "SYNOPSIS\n  Output BED for runs of selected characters\n";
+  print "USAGE\n";
+  print "  $EXE [options] snps.aligned.fa > snps.unaligned.bed\n";
+  print "OPTIONS\n";
+  foreach (@Options) {
+    printf "  --%-11s %s%s.\n",$_->{OPT},$_->{DESC},
+           defined($_->{DEFAULT}) ? " (default '$_->{DEFAULT}')" : "";
+  }
+  print "HOME\n  $URL\n";
+  exit(1);
+}
+ 
+#----------------------------------------------------------------------
