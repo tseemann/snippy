@@ -251,7 +251,7 @@ print $VCF tsv('#CHROM', qw(POS ID REF ALT QUAL FILTER INFO FORMAT), @id);
 
 for my $chr (@$chrom_list) {
   msg("Processing contig: $chr");
-  POS:
+  #POS:
   for my $pos ( sort { $a <=> $b } keys %{$var{$chr}} ) 
   {
     next if $mask{$chr}{$pos}; # BAIL OUT IF THIS SITE IS MASKED
@@ -264,13 +264,16 @@ for my $chr (@$chrom_list) {
     my @vcf = ( $chr, $pos, '.', $r );
     my @tab = ( $chr, $pos, $r );
     my %ALT;
-
+    my $iscore = 1;
     # check ALL samples not just 'var' ones, as might be absent, so not core
     for my $id (@id) {
       # check if this site has sample support ie. not -,N,n etc
       my $ac = substr( $seq{$id}{$chr}, $pos-1, 1 );
       $ac or err("Could not extract base $chr:".($pos-1)." for isolate $id");
-      next POS unless $ac =~ m/[AGTC]/i;
+      if($ac !~ m/[AGTC]/i){
+        $iscore = 0;
+        next;
+      }
       # get ALT
       my $alt = $var{$chr}{$pos}{$id};
       next unless $alt; # no variant here
@@ -279,9 +282,14 @@ for my $chr (@$chrom_list) {
       # patch in ALT
       substr($seq{$id}{$chr}, $pos-1, 1) = lc($alt); # could be '-'
       # if insertion, we don't put in core
-      next POS unless $alt =~ m/[AGTC]/i;
+      if($alt !~ m/[AGTC]/i){
+        $iscore = 0;
+        next;
+      }
       $ALT{$id} = $alt;
     }
+    next unless $iscore;
+    
     my @GT = sort { $a cmp $b } uniq values %ALT;
     my %GT_of = map { ($GT[$_-1] => $_) } (1 .. @GT);
     $GT_of{$r} = 0;
