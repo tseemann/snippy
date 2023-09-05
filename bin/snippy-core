@@ -336,10 +336,11 @@ save_fasta_hash($full_aln, \%out);
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # PREFIX.core.aln
 # Extract from full.aln with the core positions
-my $fcore_aln = "$out_prefix.f$corefreq.aln";
-msg("Generating $fcore_aln");
-save_pos_fasta_hash($fcore_aln, \%out, \@corepos);
-
+if($corefreq < 1){
+    my $fcore_aln = "$out_prefix.f$corefreq.aln";
+    msg("Generating $fcore_aln");
+    save_pos_fasta_hash($fcore_aln, \%out, \@corepos);
+}
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # PREFIX.txt file
 my @stats = ([ qw(ID LENGTH ALIGNED UNALIGNED VARIANT HET MASKED LOWCOV) ]);
