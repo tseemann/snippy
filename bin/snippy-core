@@ -36,7 +36,7 @@ sub uniq {
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Options
 
-my(@Options, $debug, $check, $noref, $aformat, $maxhap,
+my(@Options, $debug, $check, $noref, $aformat, $maxhap, $corefreq,
              $in_prefix, $out_prefix, $fasta, $bed,
              $gap_char, $mask_char);
 setOptions();
@@ -74,6 +74,8 @@ err("Can't read --bed $bed") if $bed and $bed ne 'auto' and !-f $bed;
 length($gap_char)==1 or err("--gap-char must be a single character");
 #length($pad_char)==1 or err("--pad-char must be a single character");
 length($mask_char)==1 or err("--mask-char must be a single character");
+
+$corefreq<=1.0 and $corefreq>=0.0 or err("--corefreq must be a real value within [0,1]");
 
 $in_prefix or err("Please provide --in-prefix");
 $out_prefix or err("Please provide --out-prefix");
@@ -249,53 +251,56 @@ for my $chr (@$chrom_list) {
 }
 print $VCF tsv('#CHROM', qw(POS ID REF ALT QUAL FILTER INFO FORMAT), @id);
 
+my @corepos = (); #array of core positions
+
 for my $chr (@$chrom_list) {
   msg("Processing contig: $chr");
-  #POS:
-  for my $pos ( sort { $a <=> $b } keys %{$var{$chr}} ) 
-  {
-    next if $mask{$chr}{$pos}; # BAIL OUT IF THIS SITE IS MASKED
+  POS: for my $pos ( sort { $a <=> $b } keys %{$var{$chr}} ) {
+    next POS if $mask{$chr}{$pos}; # BAIL OUT IF THIS SITE IS MASKED
 
     # check how many variants at this site and bail out if none
     my @varid = keys %{$var{$chr}{$pos}};
-    next unless @varid;
+    next POS unless @varid;
   
     my $r = substr($chrom->{$chr}, $pos-1, 1);
     my @vcf = ( $chr, $pos, '.', $r );
     my @tab = ( $chr, $pos, $r );
-    my %ALT;
-    my $iscore = 1;
-    # check ALL samples not just 'var' ones, as might be absent, so not core
-    for my $id (@id) {
+    my %ALT = ();
+    my $hits = 0;
+    my %subalts = ();
+    # check ALL samples not just 'var' ones, as might be absent, to include into core or not
+    ID: for my $id (@id) {
       # check if this site has sample support ie. not -,N,n etc
       my $ac = substr( $seq{$id}{$chr}, $pos-1, 1 );
       $ac or err("Could not extract base $chr:".($pos-1)." for isolate $id");
-      if($ac !~ m/[AGTC]/i){
-        $iscore = 0;
-        next;
-      }
+      next ID unless $ac =~ m/[AGTC]/i;
+      $hits++;
       # get ALT
       my $alt = $var{$chr}{$pos}{$id};
-      next unless $alt; # no variant here
+      next ID unless $alt; # no variant here
       #err("Bad ALT=$alt") unless $alt =~ m/[AGTC-]/;
       #err("Long ALT=$alt") if length($alt) > 1;
-      # patch in ALT
-      substr($seq{$id}{$chr}, $pos-1, 1) = lc($alt); # could be '-'
+      $subalts{$id} = lc($alt);
       # if insertion, we don't put in core
-      if($alt !~ m/[AGTC]/i){
-        $iscore = 0;
-        next;
-      }
+      next ID unless $alt =~ m/[AGTC-]/i;
       $ALT{$id} = $alt;
     }
-    next unless $iscore;
-    
+    next POS unless $hits >= ($#id + 1) * $corefreq;
+    # patch in ALT of those applicable
+    keys %subalts;
+    while(my ($k, $v) = each %subalts)
+    {
+        substr($seq{$k}{$chr}, $pos-1, 1) = $v;
+    }   
+
+    push @corepos, $pos unless grep{$_ == $pos} @corepos;
+
     my @GT = sort { $a cmp $b } uniq values %ALT;
     my %GT_of = map { ($GT[$_-1] => $_) } (1 .. @GT);
     $GT_of{$r} = 0;
 #    print Dumper($r, \%ALT, \@GT, \%GT_of);
 
-    push @vcf, join(",", @GT), '.', 'PASS', 'TYPE=snp', 'GT';
+    push @vcf, join(",", @GT), '.', 'PASS', join('', 'TYPE=', grep(/^[ACGT]$/, @GT)?'snp ':'', grep(/^-$/, @GT)?'del':''), 'GT';
     push @vcf, map { $GT_of{$ALT{$_} || $r} || '0' } @id;
     print $VCF tsv(@vcf);
 
@@ -327,6 +332,13 @@ for my $id ('Reference', @id) {
   $out{$id} = join '', map { $seq{$id}{$_} } @$chrom_list;
 }
 save_fasta_hash($full_aln, \%out);
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+# PREFIX.core.aln
+# Extract from full.aln with the core positions
+my $fcore_aln = "$out_prefix.f$corefreq.aln";
+msg("Generating $fcore_aln");
+save_pos_fasta_hash($fcore_aln, \%out, \@corepos);
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # PREFIX.txt file
@@ -422,6 +434,19 @@ sub save_fasta_hash {
   }
   return $hash;
 }
+#----------------------------------------------------------------------
+sub save_pos_fasta_hash {
+  my($fname, $hash , $cpos, $order) = @_;
+  msg("Saving FASTA: $fname") if $debug;
+  my $out = Bio::SeqIO->new(-file=>">$fname", -format=>"fasta", -alphabet=>'dna');
+  $order = [ sort keys %$hash ] unless $order;
+  for my $id (@$order) {
+    $out->write_seq(
+      Bio::Seq->new(-id=>$id, -seq=>join('', map { substr($hash->{$id},$_-1,1) } @$cpos), -alphabet=>'dna')
+    );
+  }
+  return $hash;
+}
 
 #----------------------------------------------------------------------
 sub msg { print STDERR "@_\n";}
@@ -442,6 +467,7 @@ sub setOptions {
     {OPT=>"ref=s",       VAR=>\$fasta,      DEFAULT=>'',      DESC=>"Reference in FASTA or GENBANK"},
     {OPT=>"prefix=s",    VAR=>\$out_prefix, DEFAULT=>'core',  DESC=>"Output prefix"},
     {OPT=>"maxhap=i",    VAR=>\$maxhap,     DEFAULT=>100,     DESC=>"Largest haplotype to decompose"},
+    {OPT=>"corefreq=f",  VAR=>\$corefreq,   DEFAULT=>1.0,     DESC=>"Minimum aligned freq at a position to be included in core genome"},
     {OPT=>"mask=s",      VAR=>\$bed,        DEFAULT=>'',      DESC=>"BED file of sites to mask"},
     {OPT=>"gap-char=s",  VAR=>\$gap_char,   DEFAULT=>'-',     DESC=>"Gap/deletion character"},
     {OPT=>"mask-char=s", VAR=>\$mask_char,  DEFAULT=>'X',     DESC=>"Masking character"},
