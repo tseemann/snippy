@@ -94,7 +94,7 @@ sub parse_version {
   #msg("parse=[$blob]");
   $blob =~ $re;
   my $ver = defined $1 ? $1 : 0;
-  err("Need $cmd >= $min but you have $ver - please upgrade it. VER=$VER 1=$1")
+  err("Need $cmd >= $min but you have $ver - please upgrade it. VER=$blob 1=$1")
     if version->parse("v$ver") < version->parse("v$min");
   msg("Checking version: $cmd is >= $min - ok, have $ver");
   return $ver;
