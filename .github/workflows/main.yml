@@ -1,0 +1,39 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libstdc++6 liblzma5 libbz2-1.0 bioperl
+
+    - name: Set PATH for binaries
+      run: |
+        echo "$PWD/bin:$PWD/binaries/noarch:$PWD/binaries/linux:$PATH" >> $GITHUB_ENV
+
+    - name: Check binaries
+      run: |
+        ! (ldd $PWD/binaries/linux/freebayes | grep 'not found')
+        ! (ldd $PWD/binaries/linux/vcfuniq   | grep 'not found')
+        ! (ldd $PWD/binaries/linux/samtools  | grep 'not found')
+        ! (ldd $PWD/binaries/linux/bcftools  | grep 'not found')
+
+    - name: Check snippy versions and configurations
+      run: |
+        snippy --version
+        snippy --check
+        snippy-core --version
+        snippy-core --check
+
+    - name: Run tests
+      run: |
+        make -C test
+
