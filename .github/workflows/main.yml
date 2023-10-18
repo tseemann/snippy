@@ -13,7 +13,7 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libstdc++6 liblzma5 libbz2-1.0 bioperl
+        sudo apt-get install -y libstdc++6 liblzma5 libbz2-1.0 bioperl libncurses5
 
     - name: Add binaries to PATH
       run: |
