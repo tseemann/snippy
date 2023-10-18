@@ -13,11 +13,11 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libstdc++6 liblzma5 libbz2-1.0 bioperl perl
+        sudo apt-get install -y libstdc++6 liblzma5 libbz2-1.0 bioperl
 
-    - name: Set PATH for binaries
+    - name: Add binaries to PATH
       run: |
-        echo "PATH=$PWD/bin:$PWD/binaries/noarch:$PWD/binaries/linux:$GITHUB_PATH" >> $GITHUB_ENV
+        echo "export PATH=$PWD/bin:$PWD/binaries/noarch:$PWD/binaries/linux:\$PATH" >> $GITHUB_ENV
 
     - name: Check binaries
       run: |
