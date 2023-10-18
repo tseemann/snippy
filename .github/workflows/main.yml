@@ -26,6 +26,12 @@ jobs:
         ! (ldd $PWD/binaries/linux/samtools  | grep 'not found')
         ! (ldd $PWD/binaries/linux/bcftools  | grep 'not found')
 
+    # the check snippy step keeps erroring with /usr/bin/env: ‘perl’: Not a directory so check the perl installation
+    - name: Check perl installation
+      run: |
+        perl --version
+        which perl
+
     - name: Check snippy versions and configurations
       run: |
         snippy --version
