@@ -17,7 +17,7 @@ jobs:
 
     - name: Add binaries to PATH
       run: |
-        echo "export PATH=$PWD/bin:$PWD/binaries/noarch:$PWD/binaries/linux:\$PATH" >> $GITHUB_ENV
+        echo "$PWD/bin:$PWD/binaries/noarch:$PWD/binaries/linux" >> $GITHUB_PATH
 
     - name: Check binaries
       run: |
