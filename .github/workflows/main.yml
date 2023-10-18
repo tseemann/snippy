@@ -8,7 +8,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Install Dependencies
       run: |
@@ -17,7 +17,7 @@ jobs:
 
     - name: Set PATH for binaries
       run: |
-        echo "$PWD/bin:$PWD/binaries/noarch:$PWD/binaries/linux:$PATH" >> $GITHUB_ENV
+        echo "PATH=$PWD/bin:$PWD/binaries/noarch:$PWD/binaries/linux:$GITHUB_PATH" >> $GITHUB_ENV
 
     - name: Check binaries
       run: |
