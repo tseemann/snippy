@@ -4,7 +4,7 @@ use base Exporter;
 @EXPORT_OK = qw(version);
 %EXPORT_TAGS = ( 'all' =>  [ @EXPORT_OK ] );
 
-our $VERSION = "4.6.0";
+our $VERSION = "4.7.0-alpha";
 
 use strict;
 use File::Basename;
