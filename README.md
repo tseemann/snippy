@@ -143,6 +143,19 @@ GENE | The `/gene` tag of the feature (if it existed)
 PRODUCT | The `/product` tag of the feature (if it existed)
 EFFECT | The `snpEff` annotated consequence of this variant (ANN tag in .vcf)
 
+## Columns in TXT format
+
+Name | Description
+-----|------------
+ID | Reference + Sample
+LENGTH | Length of the reference
+ALIGNED | Number of sites aligned to
+UNALIGNED | Number of sites unaligned
+VARIANT | Number of sites different from the reference
+HET | Number of sites heterozygous or poor quality genotype represented with an n (`--minqual`)
+MASKED | Number of sites masked in reference represented with an X (`--mask`)
+LOWCOV | Number of sites low coverage in this sample represented with an N (`--mincov`)
+
 ## Variant Types
 
 Type | Name | Example
