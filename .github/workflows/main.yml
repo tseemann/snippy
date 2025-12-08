@@ -10,16 +10,26 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Setup Miniforge
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        miniforge-version: latest
+        activate-environment: snippy-env
+        channels: conda-forge,bioconda,defaults
+        channel-priority: strict
+
     - name: Install Dependencies
+      shell: bash -el {0}
       run: |
-        sudo apt-get update
-        sudo apt-get install -y libstdc++6 liblzma5 libbz2-1.0 bioperl samtools freebayes bcftools
+        conda install -y samtools bcftools freebayes bedtools bwa minimap2 parallel vcflib vt snpeff seqtk snp-sites wgsim any2fasta perl-bioperl samclip
 
     - name: Add binaries to PATH
+      shell: bash -el {0}
       run: |
         echo "$PWD/bin:$PWD/binaries/noarch:$PWD/binaries/linux" >> $GITHUB_PATH
 
     - name: Check snippy versions and configurations
+      shell: bash -el {0}
       run: |
         snippy --version
         snippy --check
@@ -27,6 +37,7 @@ jobs:
         snippy-core --check
 
     - name: Run tests
+      shell: bash -el {0}
       run: |
         make -C test
 
