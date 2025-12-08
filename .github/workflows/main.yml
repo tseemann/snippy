@@ -15,7 +15,7 @@ jobs:
       with:
         miniforge-version: latest
         activate-environment: snippy-env
-        channels: conda-forge,bioconda,defaults
+        channels: conda-forge,bioconda
         channel-priority: strict
 
     - name: Install Dependencies
