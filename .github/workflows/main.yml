@@ -21,7 +21,11 @@ jobs:
     - name: Install Dependencies
       shell: bash -el {0}
       run: |
-        conda install -y samtools bcftools freebayes bedtools bwa minimap2 parallel vcflib vt snpeff seqtk snp-sites wgsim any2fasta perl-bioperl samclip
+        conda install -y \
+          samtools bcftools freebayes bedtools \
+          bwa minimap2 parallel vcflib vt snpeff \
+          seqtk snp-sites wgsim any2fasta \
+          perl-bioperl samclip
 
     - name: Add binaries to PATH
       shell: bash -el {0}
