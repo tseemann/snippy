@@ -7,6 +7,7 @@ use lib "$FindBin::RealBin/../perl5";
 use Snippy::Version;
 use Bio::SeqIO;
 use File::Basename;
+use Cwd;
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Globals
@@ -19,24 +20,44 @@ my @CMDLINE = (basename($EXE), @ARGV);
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 # Options
 
-my(@Options, $debug, $mask, $case);
+my(@Options, $debug, $mask, $case, $outfile);
 setOptions();
 
 $mask or err("Please provide --mask");
 
+msg("Current folder:", getcwd);
+
+my $outfh = \*STDOUT;
+open $outfh, '>', $outfile if $outfile;
+
 msg("Will output BED regions for runs of '$mask'");
 $mask = quotemeta($mask);
 
-my $in  = Bio::SeqIO->new(-fh=>\*ARGV, -format=>'fasta', -alphabet=>'dna');
-while (my $seq = $in->next_seq) {
-  my $dna = $seq->seq;
-  $dna = uc($dna) unless $case;
-  while ($dna =~ m/([$mask]+)/g) {
-    my $p = pos($dna);
-    my $L = length($1);
-    print join( "\t", $seq->id, $p-$L, $p ),"\n";
+my $nfile=0;
+my $nseq=0;
+my $nreg=0;
+my $nbase=0;
+
+for my $fasta (@ARGV) {
+  msg("Opening: $fasta");
+  my $in = Bio::SeqIO->new(-file=>$fasta, -format=>'fasta', -alphabet=>'dna');
+  $in or err("Could not open: $fasta");
+  $nfile++;
+  while (my $seq = $in->next_seq) {
+    my $dna = $seq->seq;
+    $dna = uc($dna) unless $case;
+    $nseq++;
+    while ($dna =~ m/([$mask]+)/g) {
+      my $p = pos($dna);
+      my $L = length($1);
+      print $outfh join( "\t", $seq->id, $p-$L, $p ),"\n";
+      $nreg++;
+      $nbase += $L;
+    }
   }
 }
+msg("Examined $nfile files with $nseq sequences.");
+msg("Identified $nreg regions with $nbase bp of '$mask'");
 
 #----------------------------------------------------------------------
 sub msg { print STDERR "@_\n";}
@@ -58,6 +79,7 @@ sub setOptions {
     {OPT=>"help!",       VAR=>\&usage,                       DESC=>"This help"},
     {OPT=>"version!",    VAR=>\&show_version,                DESC=>"Print version and exit"},
     {OPT=>"debug!",      VAR=>\$debug,     DEFAULT=>0,       DESC=>"Output verbose debug info"},
+    {OPT=>"outfile=s",   VAR=>\$outfile,   DEFAULT=>'',      DESC=>"Output file, otherwise STDOUT"},
     {OPT=>"mask=s",      VAR=>\$mask,      DEFAULT=>'N-',    DESC=>"Regions with these chars"},
     {OPT=>"case!",       VAR=>\$case,      DEFAULT=>0,       DESC=>"Be case-sensitive eg. N != n"},
   );

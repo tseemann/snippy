@@ -13,18 +13,11 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libstdc++6 liblzma5 libbz2-1.0 bioperl libncursesw5
+        sudo apt-get install -y libstdc++6 liblzma5 libbz2-1.0 bioperl samtools freebayes bcftools
 
     - name: Add binaries to PATH
       run: |
         echo "$PWD/bin:$PWD/binaries/noarch:$PWD/binaries/linux" >> $GITHUB_PATH
-
-    - name: Check binaries
-      run: |
-        ! (ldd $PWD/binaries/linux/freebayes | grep 'not found')
-        ! (ldd $PWD/binaries/linux/vcfuniq   | grep 'not found')
-        ! (ldd $PWD/binaries/linux/samtools  | grep 'not found')
-        ! (ldd $PWD/binaries/linux/bcftools  | grep 'not found')
 
     - name: Check snippy versions and configurations
       run: |

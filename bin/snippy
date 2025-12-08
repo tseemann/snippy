@@ -76,7 +76,7 @@ $ENV{PATH} = "$BINDIR:"
 for my $exe (qw(bwa bcftools samtools java snpEff samclip seqtk
                 parallel freebayes freebayes-parallel fasta_generate_regions.py 
                 vcfstreamsort vcfuniq vcffirstheader gzip vt
-                snippy-vcf_to_tab snippy-vcf_report)) {
+                snippy-vcf_to_tab snippy-vcf_report snippy-fasta_to_bed)) {
   my($which) = qx(which $exe 2> /dev/null);
   $which or err("Can not find required '$exe' in PATH");
   chomp $which;
@@ -355,11 +355,15 @@ my $sortopt = "-l 0 $sort_temp $sort_cpus $sort_ram";
 # prepare the commands
 
 sub consensus_commands {
-  my($ref, $vcf, $fasta, $nuke) = @_;
+  my($ref, $vcf, $alnfa, $fasta, $nuke) = @_;
+  my $badchar = $HET_SYM . $LOWCOV_SYM . $ZEROCOV_SYM ;
+  my $maskopt = $alnfa ? "--mask $alnfa.bed" : "";
   return (
     "bcftools convert -Oz -o $vcf.gz $vcf",
     "bcftools index -f $vcf.gz",
-    "bcftools consensus --sample $rgid -f $ref -o $fasta $vcf.gz",
+    $alnfa ? "snippy-fasta_to_bed --mask '$badchar' --out '$alnfa.bed' '$alnfa'" : (),
+#    "bcftools consensus $maskopt --sample $rgid -f $ref -o $fasta $vcf.gz",
+    "bcftools consensus $maskopt -f $ref -o $fasta $vcf.gz",
     $nuke ? "rm -f $vcf.gz $vcf.gz.csi $vcf.gz.tbi" : (),
   );
 }
@@ -401,9 +405,10 @@ my @cmd = (
   "$BINDIR/snippy-vcf_to_tab --gff $refdir/ref.gff --ref $refdir/ref.fa --vcf $prefix.vcf > $prefix.tab",
   # SNPS only
   "$BINDIR/snippy-vcf_extract_subs $prefix.filt.vcf > $prefix.subs.vcf",
-  # consensus sequences
-  consensus_commands("$refdir/ref.fa", "$prefix.vcf", "$prefix.consensus.fa"),
-  consensus_commands("$refdir/ref.fa", "$prefix.subs.vcf", "$prefix.consensus.subs.fa", 1),
+  # consensus sequences 
+  # DO THIS AFTER snps.aligned.fa is made
+  #consensus_commands("$refdir/ref.fa", "$prefix.vcf", "$prefix.aligned.fa", "$prefix.consensus.fa"),
+  consensus_commands("$refdir/ref.fa", "$prefix.subs.vcf", undef, "$prefix.consensus.subs.fa", 1),
   # any final stuff
   @post_cmd,
 );
@@ -443,14 +448,21 @@ unlink $log_file if -r $log_file; # https://github.com/tseemann/snippy/issues/36
 append_to_file($log_file, "### echo snippy $VERSION\n");
 append_to_file($log_file, "### cd $ORIGDIR\n\n### @CMDLINE\n");
 
-for my $cmd (@cmd) {
+sub run_cmd {
+  my($cmd) = @_;
   # put section in logfile
   append_to_file($log_file, "\n### $cmd\n\n");
   # run it
   $cmd .= " 2>> $log_file";
   msg("Running: $cmd");
   system($cmd)==0 or err("Error running command, check $outdir/$log_file");
-}
+}  
+
+#
+#  RUN MOST OF THE PIPELINE
+#
+
+run_cmd($_) for @cmd;
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # produce the depth-masked reference
@@ -497,6 +509,11 @@ while (<$het_fh>) {
 msg("Marked $het_bp heterozygous sites with '$HET_SYM'");
 
 save_fasta_hash($afa_fn, \%masked);
+
+# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+# call consensus
+
+run_cmd($_) for consensus_commands("$refdir/ref.fa", "$prefix.vcf", "$prefix.aligned.fa", "$prefix.consensus.fa");
 
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # produce .bed and .gff files from the .csv
