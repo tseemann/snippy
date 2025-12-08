@@ -19,7 +19,7 @@ jobs:
         channels: conda-forge,bioconda
         channel-priority: strict
 
-    - name: Install Dependencies
+    - name: Install and Test
       shell: bash -el {0}
       run: |
         mamba install -y \
@@ -30,24 +30,9 @@ jobs:
         samtools --version
         samclip --version
         echo $PWD
-
-    - name: Add binaries to PATH
-      shell: bash -el {0}
-      run: |
-        echo "$PWD/bin" >> $GITHUB_PATH
-
-    - name: Check snippy versions and configurations
-      shell: bash -el {0}
-      run: |
-        mamba activate snippy-env
-        snippy --version
-        snippy --check
-        snippy-core --version
-        snippy-core --check
-
-    - name: Run tests
-      shell: bash -el {0}
-      run: |
-        mamba activate snippy-env
+        bin/snippy --version
+        bin/snippy --check
+        bim/snippy-core --version
+        bin/snippy-core --check
         make -C test
 
