@@ -27,6 +27,9 @@ jobs:
           bwa minimap2 parallel vcflib vt snpeff \
           seqtk snp-sites wgsim any2fasta \
           perl-bioperl samclip
+        samtools --version
+        samclip --version
+        echo $PWD
 
     - name: Add binaries to PATH
       shell: bash -el {0}
@@ -36,6 +39,7 @@ jobs:
     - name: Check snippy versions and configurations
       shell: bash -el {0}
       run: |
+        mamba activaye snippy-env
         snippy --version
         snippy --check
         snippy-core --version
