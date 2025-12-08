@@ -39,7 +39,7 @@ jobs:
     - name: Check snippy versions and configurations
       shell: bash -el {0}
       run: |
-        mamba activaye snippy-env
+        mamba activate snippy-env
         snippy --version
         snippy --check
         snippy-core --version
@@ -48,5 +48,6 @@ jobs:
     - name: Run tests
       shell: bash -el {0}
       run: |
+        mamba activate snippy-env
         make -C test
 
