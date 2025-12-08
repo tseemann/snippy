@@ -15,13 +15,14 @@ jobs:
       with:
         miniforge-version: latest
         activate-environment: snippy-env
+        use-mamba: true
         channels: conda-forge,bioconda
         channel-priority: strict
 
     - name: Install Dependencies
       shell: bash -el {0}
       run: |
-        conda install -y \
+        mamba install -y \
           samtools bcftools freebayes bedtools \
           bwa minimap2 parallel vcflib vt snpeff \
           seqtk snp-sites wgsim any2fasta \
@@ -30,7 +31,7 @@ jobs:
     - name: Add binaries to PATH
       shell: bash -el {0}
       run: |
-        echo "$PWD/bin:$PWD/binaries/noarch:$PWD/binaries/linux" >> $GITHUB_PATH
+        echo "$PWD/bin" >> $GITHUB_PATH
 
     - name: Check snippy versions and configurations
       shell: bash -el {0}
