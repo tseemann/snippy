@@ -40,12 +40,12 @@ chr    100541  del     CAAA  CAA    CAA:38 CAAA:1   CDS   +                    E
 plas      619  complex GATC  AATA   GATC:28 AATA:0  
 plas     3221  mnp     GA    CT     CT:39 CT:0      CDS   +                    ECO_p012  rep  hypothetical protein
 
-% snippy-core --prefix core mysnps1 mysnps2 mysnps3 mysnps4 
+% snippy-core --corefreq .95 --prefix core mysnps1 mysnps2 mysnps3 mysnps4 
 Loaded 4 SNP tables.
 Found 2814 core SNPs from 96615 SNPs.
 
 % ls core.*
-core.aln core.tab core.tab core.txt core.vcf
+core.aln core.f.95.aln core.full.aln core.tab core.tab core.txt core.vcf
 ```
 
 # Installation
@@ -102,7 +102,7 @@ Extension | Description
 .bam | The alignments in [BAM](http://en.wikipedia.org/wiki/SAMtools) format. Includes unmapped, multimapping reads. Excludes duplicates.
 .bam.bai | Index for the .bam file
 .log | A log file with the commands run and their outputs
-.aligned.fa | A version of the reference but with `-` at position with `depth=0` and `N` for `0 < depth < --mincov` (**does not have variants**)
+.aligned.fa | A version of the reference but with `-` at position with `depth=0` and `N` for `0 < depth < --mincov` (**now have variants**)
 .consensus.fa | A version of the reference genome with *all* variants instantiated
 .consensus.subs.fa | A version of the reference genome with *only substitution* variants instantiated
 .raw.vcf | The unfiltered variant calls from Freebayes
