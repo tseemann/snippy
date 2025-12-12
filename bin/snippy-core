@@ -69,7 +69,7 @@ if ($check) {
 $fasta or err("Please provide --ref FASTA/GENBANK");
 -r $fasta or err("Can't open --ref $fasta");
 
-err("Can't read --bed $bed") if $bed and $bed ne 'auto' and !-f $bed;
+err("Can't read --bed $bed") if $bed and $bed ne 'auto' and ! -f $bed;
 
 length($gap_char)==1 or err("--gap-char must be a single character");
 #length($pad_char)==1 or err("--pad-char must be a single character");
