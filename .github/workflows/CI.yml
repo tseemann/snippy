@@ -30,6 +30,14 @@ jobs:
       - name: Set PATH
         run: |
           echo "$GITHUB_WORKSPACE/bin" >> $GITHUB_PATH
+
+      - name: Perl setup
+        run: |
+          conda info
+          which snippy
+          which perl
+          perl -V
+          find $CONDA_PREFIX -name SeaIO.pm
       
       - name: Basic tests
         run: |
