@@ -3,13 +3,13 @@ channels:
   - bioconda
 dependencies:
   - perl >=5.18.0
-  - perl-bioperl
+  - perl-bioperl >=1.7.2
   - bwa >=0.7.12
   - minimap2
   - samtools
   - bcftools
   - bedtools
-  - freebayes
+  - freebayes >=1.1
   - vcflib
   - snpEff >=4.3
   - snp-sites
