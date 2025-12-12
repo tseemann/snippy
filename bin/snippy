@@ -75,7 +75,7 @@ $ENV{PATH} = "$BINDIR:"
 
 for my $exe (qw(bwa bcftools samtools java snpEff samclip seqtk
                 parallel freebayes freebayes-parallel fasta_generate_regions.py 
-                vcfstreamsort vcfuniq vcffirstheader gzip vt
+                vcfstreamsort vcfuniq vcffirstheader gzip
                 snippy-vcf_to_tab snippy-vcf_report snippy-fasta_to_bed)) {
   my($which) = qx(which $exe 2> /dev/null);
   $which or err("Can not find required '$exe' in PATH");
@@ -394,7 +394,7 @@ my @cmd = (
   "freebayes-parallel $refdir/ref.txt $cpus $fbopt -f $refdir/ref.fa $prefix.bam > $prefix.raw.vcf",
   # only keep homozygous and normalize(trim) REF/ALT and remove most tags
   "bcftools view --include '$bcf_filter' $prefix.raw.vcf ".
-   " | vt normalize -r $refdir/ref.fa -".
+   " | bcftools norm -f $refdir/ref.fa -".
    " | bcftools annotate --remove '$KEEP_VCF_TAGS' > $prefix.filt.vcf",
 #   " > $prefix.filt.vcf",
   # call consequences
