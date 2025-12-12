@@ -7,9 +7,6 @@
 # Snippy
 Rapid haploid variant calling and core genome alignment
 
-## Author
-[Torsten Seemann](https://twitter.com/torstenseemann)
-
 ## Synopsis
 
 Snippy finds SNPs between a haploid reference genome and your NGS sequence
@@ -54,23 +51,7 @@ core.aln core.tab core.tab core.txt core.vcf
 ## Conda
 Install [Bioconda](https://bioconda.github.io/user/install.html) then:
 ```
-conda install -c conda-forge -c bioconda -c defaults snippy
-```
-
-## Homebrew
-Install [Homebrew](http://brew.sh/) (MacOS)
-or [LinuxBrew](http://linuxbrew.sh/) (Linux) then:
-```
-brew install brewsci/bio/snippy
-```
-
-## Source
-This will install the latest version direct from Github. 
-You'll need to add Snippy's `bin` directory to your `$PATH`.
-```
-cd $HOME
-git clone https://github.com/tseemann/snippy.git
-$HOME/snippy/bin/snippy --help
+conda install -c conda-forge -c bioconda snippy
 ```
 
 # Check installation
@@ -482,28 +463,6 @@ Snippy is free software, released under the
 Please submit suggestions and bug reports to the 
 [Issue Tracker](https://github.com/tseemann/snippy/issues)
 
-## Requirements
-
-* perl >= 5.18
-* bioperl >= 1.7
-* bwa mem >= 0.7.12 
-* minimap2 >= 2.0
-* samtools >= 1.7
-* bcftools >= 1.7
-* bedtools >= 2.0
-* GNU parallel >= 2013xxxx
-* freebayes >= 1.1 (freebayes, freebayes-parallel, fasta_generate_regions.py)
-* vcflib >= 1.0 (vcfstreamsort, vcfuniq, vcffirstheader)
-* [vt](https://genome.sph.umich.edu/wiki/Vt) >= 0.5
-* snpEff >= 4.3
-* samclip >= 0.2
-* seqtk >= 1.2
-* snp-sites >= 2.0
-* any2fasta >= 0.4
-* wgsim >= 1.8 (for testing only - `wgsim` command)
-
-## Bundled binaries
-
-For Linux (compiled on Ubuntu 16.04 LTS) and macOS (compiled on High Sierra Brew) 
-some of the binaries, JARs and scripts are included.
+## Author
+[Torsten Seemann](https://twitter.com/torstenseemann)
 
