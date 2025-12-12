@@ -2,15 +2,16 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
+  - perl >=5.18.0
   - perl-bioperl
-  - bwa
+  - bwa >=0.7.12
   - minimap2
   - samtools
   - bcftools
   - bedtools
   - freebayes
   - vcflib
-  - snpEff
+  - snpEff >=4.3
   - snp-sites
   - core-snp-filter
   - any2fasta
