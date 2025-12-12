@@ -1,0 +1,22 @@
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - perl-bioperl
+  - bwa
+  - minimap2
+  - samtools
+  - bcftools
+  - bedtools
+  - freebayes
+  - vcflib
+  - snpEff
+  - snp-sites
+  - core-snp-filter
+  - any2fasta
+  - samclip
+  - seqtk
+  - seqkit
+  - csvtk
+  - goalign
+  - parallel
