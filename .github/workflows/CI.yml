@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - name: Pull code
+        uses: actions/checkout@v5
+
+      - name: Setup conda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          environment-file: environment.yml
+ #          python-version: 3.11
+          miniforge-version: latest
+          channels: conda-forge,bioconda
+          channel-priority: strict
+          activate-environment: snippy
+          auto-update-conda: true
+
+      - name: Set PATH
+        run: |
+          echo "$GITHUB_WORKSPACE/bin" >> $GITHUB_PATH
+      
+      - name: Basic tests
+        run: |
+          snippy --version
+          snippy --check
+          snippy-core --version
+          snippy-core --check
+
+      - name: Big test
+        run: make -C test
