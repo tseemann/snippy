@@ -153,7 +153,7 @@ sub guess_prefix {
   for my $try ("$dir/$in_prefix.$ext", <$dir/*.$ext>) {
     #msg("Checking if file exists: $try");
     if (-r $try) {
-      $try =~ m"^$dir/(.*?).$ext";
+      $try =~ m"^\Q$dir\E/(.*?).$ext";
       return $1;
     }
   }
