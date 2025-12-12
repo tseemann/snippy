@@ -61,15 +61,11 @@ msg("Written by $AUTHOR");
 msg("Obtained from $URL");
 msg("Detected operating system: $OPSYS");
 
-# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
-# give access to bundled tools (at end of PATH)
+# . . . . . . . . . . . . . . . . . . . . . . . .
+# update PATH
 
-msg("Enabling bundled $OPSYS tools.");
-$ENV{PATH} = "$BINDIR:"
-             .$ENV{PATH}
-             .":$APPDIR/binaries/$OPSYS"
-             .":$APPDIR/binaries/noarch";
-
+$ENV{PATH} = "$BINDIR:".$ENV{'PATH'};
+             
 # . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
 # check for needed exes
 
